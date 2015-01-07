@@ -2,3 +2,9 @@ build.py
 *~
 *.o
 *.input
+
+ne_10m_admin_0_countries.*
+node
+
+world.png
+map.xml

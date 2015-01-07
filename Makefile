@@ -4,19 +4,24 @@ CXXFLAGS = -fPIC -std=c++11 -Wall -Wextra#$(shell mapnik-config --cflags)
 
 LIBS = -lmapnik#$(shell mapnik-config --libs --ldflags --dep-libs)
 
-SRC = $(wildcard *.cpp)
+SRC = $(wildcard *.cc)
 
-OBJ = $(SRC:.cpp=.o)
+OBJ = $(SRC:.cc=.o)
 
 BIN = hello.input
 
 all : $(SRC) $(BIN)
 
 $(BIN) : $(OBJ)
-	$(CXX) -shared $(OBJ) $(LIBS) -o $@
+	@echo [LD] $@
+	@$(CXX) -shared $(OBJ) $(LIBS) -o $@
 
-.cpp.o :
-	$(CXX) -c $(CXXFLAGS) $< -o $@
+%.o: %.cc 
+	@echo [C++] $<
+	@g++ $(CXXFLAGS) $< -c -o $@
+
+#.cpp.o :
+#	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 .PHONY : clean
 
@@ -25,6 +30,7 @@ clean:
 	rm -f $(BIN)
 
 deploy : all
-	cp hello.input $(shell mapnik-config --input-plugins)
+	@echo [CP] hello.input "->" $(shell mapnik-config --input-plugins)
+	@cp hello.input $(shell mapnik-config --input-plugins)
 
 install: clean all deploy

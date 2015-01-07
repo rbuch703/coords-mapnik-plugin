@@ -1,6 +1,6 @@
 // file plugin
-#include "hello_datasource.hpp"
-#include "hello_featureset.hpp"
+#include "helloDataSource.h"
+#include "helloFeatureSet.h"
 
 // boost
 #include <boost/make_shared.hpp>
@@ -75,7 +75,7 @@ mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
          << "lat:" << bbox.miny() << " -> " << bbox.maxy() << ", "
          << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;
     for (const std::string s: q.property_names())
-        cout << "\t" << s << endl;
+        cout << "\texpecting property '" << s << "'" << endl;
 
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))

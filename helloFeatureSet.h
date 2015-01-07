@@ -9,6 +9,8 @@
 // boost
 #include <boost/scoped_ptr.hpp> // needed for wrapping the transcoder
 
+#include <stdio.h>
+
 class hello_featureset : public mapnik::Featureset
 {
 public:
@@ -27,6 +29,7 @@ private:
     mapnik::value_integer feature_id_;
     boost::scoped_ptr<mapnik::transcoder> tr_;
     mapnik::context_ptr ctx_;
+    FILE* fData;
 };
 
 #endif // HELLO_FEATURESET_HPP
