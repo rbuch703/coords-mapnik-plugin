@@ -60,6 +60,7 @@ private:
     static const std::string name_;
     mapnik::layer_descriptor desc_;
     mapnik::box2d<double> extent_;
+    std::string path_;
 };
 
 

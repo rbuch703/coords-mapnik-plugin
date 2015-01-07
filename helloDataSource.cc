@@ -18,7 +18,7 @@ DATASOURCE_PLUGIN(hello_datasource)
 hello_datasource::hello_datasource(parameters const& params): 
     datasource(params),
     desc_( *params.get<std::string>("type"), *params.get<std::string>("encoding","utf-8")),
-    extent_()
+    extent_(), path_( *params.get<std::string>("path", "") )
 {
     this->init(params);
 }
@@ -70,17 +70,17 @@ mapnik::layer_descriptor hello_datasource::get_descriptor() const
 
 mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
 {
-    const mapnik::box2d<double> &bbox = q.get_bbox();
-    cout << "processing query in bounds " 
+    //const mapnik::box2d<double> &bbox = q.get_bbox();
+    /*cout << "processing query in bounds " 
          << "lat:" << bbox.miny() << " -> " << bbox.maxy() << ", "
-         << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;
+         << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;*/
     for (const std::string s: q.property_names())
         cout << "\texpecting property '" << s << "'" << endl;
 
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
-        return boost::make_shared<hello_featureset>(q.get_bbox(),desc_.get_encoding());
+        return boost::make_shared<hello_featureset>(q.get_bbox(),desc_.get_encoding(), path_);
     }
 
     // otherwise return an empty featureset pointer

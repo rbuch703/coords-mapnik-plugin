@@ -4,7 +4,8 @@ build.py
 *.input
 
 ne_10m_admin_0_countries.*
-node
+data/
 
 world.png
 map.xml
+

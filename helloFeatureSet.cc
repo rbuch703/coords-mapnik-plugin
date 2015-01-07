@@ -13,13 +13,13 @@
 using std::cout;
 using std::endl;
 
-hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string const& encoding)
+hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string const& encoding, std::string path)
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
-      ctx_(boost::make_shared<mapnik::context_type>()) 
+      ctx_(boost::make_shared<mapnik::context_type>())
 { 
-    fData = fopen("/home/rbuchhol/Desktop/MapnikPlugin/node", "rb");
+    fData = fopen(path.c_str(), "rb");
 
     // the featureset context needs to know the field schema
     ctx_->push("key" ); // let us pretend it just has one column/attribute name "key"

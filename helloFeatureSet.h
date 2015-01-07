@@ -15,7 +15,7 @@ class hello_featureset : public mapnik::Featureset
 {
 public:
     // this constructor can have any arguments you need
-    hello_featureset(mapnik::box2d<double> const& box, std::string const& encoding);
+    hello_featureset(mapnik::box2d<double> const& box, std::string const& encoding, std::string path);
 
     // desctructor
     virtual ~hello_featureset();
