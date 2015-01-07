@@ -32,7 +32,7 @@ mapnik::feature_ptr hello_featureset::next()
         ++feature_id_;
 
         // create an attribute pair of key:value
-        UnicodeString ustr = tr_->transcode("hello world!");
+        UnicodeString ustr = tr_->transcode("hello world2!");
         feature->put(attribute,ustr);
 
         // we need a geometry to display so just for fun here
@@ -55,11 +55,13 @@ mapnik::feature_ptr hello_featureset::next()
         // so here we draw a line around the point
         mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
         line->move_to(box_.minx(),box_.miny());
-        line->line_to(box_.minx(),box_.maxy());
         line->line_to(box_.maxx(),box_.maxy());
+        feature->add_geometry(line); 
+
+        line = new mapnik::geometry_type(mapnik::LineString);
+        line->move_to(box_.minx(),box_.maxy());
         line->line_to(box_.maxx(),box_.miny());
-        line->line_to(box_.minx(),box_.miny());
-        feature->add_geometry(line);
+        feature->add_geometry(line); 
 
         // return the feature!
         return feature;

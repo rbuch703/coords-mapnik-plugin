@@ -1,6 +1,6 @@
 #CXX = clang++
 
-CXXFLAGS = -fPIC #$(shell mapnik-config --cflags) 
+CXXFLAGS = -fPIC -std=c++11 -Wall -Wextra#$(shell mapnik-config --cflags) 
 
 LIBS = -lmapnik#$(shell mapnik-config --libs --ldflags --dep-libs)
 

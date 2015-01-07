@@ -5,15 +5,19 @@
 // boost
 #include <boost/make_shared.hpp>
 
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 using mapnik::datasource;
 using mapnik::parameters;
 
 DATASOURCE_PLUGIN(hello_datasource)
 
-hello_datasource::hello_datasource(parameters const& params)
-: datasource(params),
-    desc_(*params.get<std::string>("type"), *params.get<std::string>("encoding","utf-8")),
+hello_datasource::hello_datasource(parameters const& params): 
+    datasource(params),
+    desc_( *params.get<std::string>("type"), *params.get<std::string>("encoding","utf-8")),
     extent_()
 {
     this->init(params);
@@ -21,12 +25,19 @@ hello_datasource::hello_datasource(parameters const& params)
 
 void hello_datasource::init(mapnik::parameters const& params)
 {
+    cout << "initializing plugin '" << name() << "'" << endl;
+    for (auto x : params)
+    {
+        cout << x.first << " : " <<*params.get<std::string>(x.first) << endl;
+        //int val = x.second;
+        
+    }
     // every datasource must have some way of reporting its extent
     // in this case we are not actually reading from any data so for fun
     // let's just create a world extent in Mapnik's default srs:
     // '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs' (equivalent to +init=epsg:4326)
     // see http://spatialreference.org/ref/epsg/4326/ for more details
-    extent_.init(-180,-90,180,90);
+    extent_ = mapnik::box2d<double>(-180,-90,180,90);
 }
 
 hello_datasource::~hello_datasource() { }
@@ -49,7 +60,7 @@ mapnik::box2d<double> hello_datasource::envelope() const
 
 boost::optional<mapnik::datasource::geometry_t> hello_datasource::get_geometry_type() const
 {
-    return mapnik::datasource::Point;
+    return mapnik::datasource::Collection;
 }
 
 mapnik::layer_descriptor hello_datasource::get_descriptor() const
@@ -59,6 +70,13 @@ mapnik::layer_descriptor hello_datasource::get_descriptor() const
 
 mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
 {
+    const mapnik::box2d<double> &bbox = q.get_bbox();
+    cout << "processing query in bounds " 
+         << "lat:" << bbox.miny() << " -> " << bbox.maxy() << ", "
+         << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;
+    for (const std::string s: q.property_names())
+        cout << "\t" << s << endl;
+
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
@@ -69,7 +87,7 @@ mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
     return mapnik::featureset_ptr();
 }
 
-mapnik::featureset_ptr hello_datasource::features_at_point(mapnik::coord2d const& pt, double tol) const
+mapnik::featureset_ptr hello_datasource::features_at_point(mapnik::coord2d const&, double) const
 {
     // features_at_point is rarely used - only by custom applications,
     // so for this sample plugin let's do nothing...
