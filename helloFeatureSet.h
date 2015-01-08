@@ -23,6 +23,9 @@ public:
     // mandatory: you must expose a next() method, called when rendering
     mapnik::feature_ptr next();
 
+    bool wasReturnedBefore(uint64_t wayId);
+    void markAsReturnedBefore(uint64_t wayId);
+
 private:
     // members are up to you, but these are recommended
     mapnik::box2d<double> box_;
@@ -30,6 +33,7 @@ private:
     boost::scoped_ptr<mapnik::transcoder> tr_;
     mapnik::context_ptr ctx_;
     FILE* fData;
+    std::vector<bool> waysReturned;
 };
 
 #endif // HELLO_FEATURESET_HPP

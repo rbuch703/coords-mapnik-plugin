@@ -2,6 +2,7 @@ build.py
 *~
 *.o
 *.input
+tester
 
 ne_10m_admin_0_countries.*
 data/

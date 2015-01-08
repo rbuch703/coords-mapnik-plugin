@@ -28,6 +28,35 @@ hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string
 
 hello_featureset::~hello_featureset() { }
 
+
+bool hello_featureset::wasReturnedBefore(uint64_t wayId)
+{
+    if (wayId >= waysReturned.capacity())
+    {
+        uint64_t oldSize = waysReturned.capacity();
+        uint64_t newSize = (wayId +1) * 11 / 10;
+        waysReturned.resize( wayId + 1);
+        for (uint64_t i = oldSize; i < newSize; i++)
+            waysReturned[i] = false;
+    }
+    return waysReturned[wayId];    
+}
+
+void hello_featureset::markAsReturnedBefore(uint64_t wayId)
+{
+    if (wayId >= waysReturned.capacity())
+    {
+        uint64_t oldSize = waysReturned.capacity();
+        uint64_t newSize = (wayId +1) * 11 / 10;
+        waysReturned.resize( wayId + 1);
+        for (uint64_t i = oldSize; i < newSize; i++)
+            waysReturned[i] = false;        
+    }
+    
+    waysReturned[wayId] = true;
+}
+
+
 mapnik::feature_ptr hello_featureset::next()
 {
 
@@ -35,25 +64,32 @@ mapnik::feature_ptr hello_featureset::next()
     //if (feature_id_ > 1)
         return mapnik::feature_ptr();
         
-    int ch = fgetc(fData);
-    if (ch == EOF) //read the whole file -> clean up
+    int ch;
+    OsmLightweightWay way;
+    while ( (ch = fgetc(fData)) != EOF)
+    {
+        ungetc(ch, fData);
+        way = OsmLightweightWay(fData);
+        
+        //cout << way.id << endl;
+        if ( !wasReturnedBefore(1) )
+        {
+            markAsReturnedBefore( 10);
+            break;  //leave loop; 'way' holds the next OSM way to be returned
+        }
+    }
+
+    if (ch == EOF) //already read the whole file -> clean up
     {
         fclose(fData);
         return mapnik::feature_ptr();
     }
-    ungetc(ch, fData);
     
-    //if (feature_id_ > 1)
-    //    return mapnik::feature_ptr();
-    
-    OsmLightweightWay way(fData);
     assert(way.numVertices > 0);
-    //cout << way << endl;
     // create a new feature
     mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_));
 
-    feature->put( "key" ,tr_->transcode("hello world5!") );
-
+    //feature->put( "key" ,tr_->transcode("hello world5!") );
     mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
 
     double lat = way.vertices[0].lat / 10000000.0;

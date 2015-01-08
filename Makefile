@@ -1,20 +1,23 @@
 #CXX = clang++
 
-CXXFLAGS = -fPIC -std=c++11 -Wall -Wextra#$(shell mapnik-config --cflags) 
+CXXFLAGS = -g -fPIC -std=c++11 -Wall -Wextra#$(shell mapnik-config --cflags) 
 
 LIBS = -lmapnik#$(shell mapnik-config --libs --ldflags --dep-libs)
 
-SRC = $(wildcard *.cc)
-
+SRC = helloDataSource.cc helloFeatureSet.cc mem_map.cc osmMappedTypes.cc osmTypes.cc
 OBJ = $(SRC:.cc=.o)
 
-BIN = hello.input
+BIN = hello.input tester
 
-all : $(SRC) $(BIN)
+all : $(BIN)
 
-$(BIN) : $(OBJ)
+hello.input : $(OBJ)
 	@echo [LD] $@
 	@$(CXX) -shared $(OBJ) $(LIBS) -o $@
+
+tester : $(OBJ) pluginTest.cc
+	@echo [LD] $@
+	@$(CXX) $(OBJ) -g pluginTest.cc $(LIBS) -o $@
 
 %.o: %.cc 
 	@echo [C++] $<
@@ -26,10 +29,9 @@ $(BIN) : $(OBJ)
 .PHONY : clean
 
 clean:
-	rm -f $(OBJ)
-	rm -f $(BIN)
+	rm -f $(OBJ) $(BIN) *~
 
-deploy : all
+deploy : hello.input
 	@echo [CP] hello.input "->" $(shell mapnik-config --input-plugins)
 	@cp hello.input $(shell mapnik-config --input-plugins)
 
