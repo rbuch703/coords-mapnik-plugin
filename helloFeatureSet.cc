@@ -6,9 +6,10 @@
 #include <boost/make_shared.hpp>
 
 #include "helloFeatureSet.h"
-#include "osmMappedTypes.h"
 
 #include <iostream>
+#include <unistd.h> //for stat()
+#include <sys/stat.h>
 
 using std::cout;
 using std::endl;
@@ -19,36 +20,76 @@ hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string
       tr_(new mapnik::transcoder(encoding)),
       ctx_(boost::make_shared<mapnik::context_type>())
 { 
+
+    buildFileHierarchy(path, files, box, mapnik::box2d<double>(-180, -90, 180, 90));
+    
+    for (std::string &s: files)
+        cout << "\t registered file '" << s << "' for parsing" << endl;
+
     fData = fopen(path.c_str(), "rb");
+//    fData = NULL;
 
     // the featureset context needs to know the field schema
     ctx_->push("key" ); // let us pretend it just has one column/attribute name "key"
-
 }
 
 hello_featureset::~hello_featureset() { }
 
+void hello_featureset::buildFileHierarchy(std::string path, std::vector<std::string> &files, 
+    const mapnik::box2d<double> &queryBounds, mapnik::box2d<double> tileBounds)
+{
+    //cout << "tile bounds for " << path << " are " << tileBounds << queryBounds.intersect(tileBounds).valid() << endl;
+    //if current tile is outside the query bounds
+    if (! queryBounds.intersect(tileBounds).valid() )
+        return;
+        
+    struct stat buf;
+    int res = stat(path.c_str(), &buf);
+    if (res != 0) return;
+    
+    if (! S_ISREG(buf.st_mode)) return;
+    
+    /* If the file is empty, it does not contain relevant data, but it may have child
+     * nodes that do. So do not add it to the list of readable files, but still recurse
+     * to its child nodes. */
+    if ( buf.st_size > 0)
+        files.push_back(path);
+
+    double latMin = tileBounds.miny();
+    double latMax = tileBounds.maxy();
+    double latMid = (latMin + latMax) / 2.0;
+    
+    double lngMin = tileBounds.minx();
+    double lngMax = tileBounds.maxx();
+    double lngMid = (lngMin + lngMax) / 2.0;        
+
+    buildFileHierarchy( path + "0", files, queryBounds, mapnik::box2d<double>(lngMin, latMid, lngMid, latMax));
+    buildFileHierarchy( path + "1", files, queryBounds, mapnik::box2d<double>(lngMid, latMid, lngMax, latMax));
+    buildFileHierarchy( path + "2", files, queryBounds, mapnik::box2d<double>(lngMin, latMin, lngMid, latMid));
+    buildFileHierarchy( path + "3", files, queryBounds, mapnik::box2d<double>(lngMid, latMin, lngMax, latMid));
+}
 
 bool hello_featureset::wasReturnedBefore(uint64_t wayId)
 {
-    if (wayId >= waysReturned.capacity())
+    if (wayId >= waysReturned.size())
     {
-        uint64_t oldSize = waysReturned.capacity();
+        uint64_t oldSize = waysReturned.size();
         uint64_t newSize = (wayId +1) * 11 / 10;
-        waysReturned.resize( wayId + 1);
+        waysReturned.resize( newSize);
         for (uint64_t i = oldSize; i < newSize; i++)
             waysReturned[i] = false;
     }
-    return waysReturned[wayId];    
+    return waysReturned[wayId];
+    //return false;
 }
 
 void hello_featureset::markAsReturnedBefore(uint64_t wayId)
 {
-    if (wayId >= waysReturned.capacity())
+    if (wayId >= waysReturned.size())
     {
-        uint64_t oldSize = waysReturned.capacity();
+        uint64_t oldSize = waysReturned.size();
         uint64_t newSize = (wayId +1) * 11 / 10;
-        waysReturned.resize( wayId + 1);
+        waysReturned.resize( newSize);
         for (uint64_t i = oldSize; i < newSize; i++)
             waysReturned[i] = false;        
     }
@@ -56,6 +97,27 @@ void hello_featureset::markAsReturnedBefore(uint64_t wayId)
     waysReturned[wayId] = true;
 }
 
+boost::optional<OsmLightweightWay> hello_featureset::getNextWay()
+{
+    int ch;
+
+    while ( (ch = fgetc(fData)) != EOF)
+    {
+        ungetc(ch, fData);
+        OsmLightweightWay way(fData);
+        
+        //cout << way.id << endl;
+        if ( !wasReturnedBefore( way.id) )
+        {
+            markAsReturnedBefore( way.id);
+            return way;
+        }
+    }
+
+    //already read the whole file -> clean up
+    fclose(fData);
+    return boost::none;
+}
 
 mapnik::feature_ptr hello_featureset::next()
 {
@@ -63,27 +125,12 @@ mapnik::feature_ptr hello_featureset::next()
     if (!fData)
     //if (feature_id_ > 1)
         return mapnik::feature_ptr();
-        
-    int ch;
-    OsmLightweightWay way;
-    while ( (ch = fgetc(fData)) != EOF)
-    {
-        ungetc(ch, fData);
-        way = OsmLightweightWay(fData);
-        
-        //cout << way.id << endl;
-        if ( !wasReturnedBefore(1) )
-        {
-            markAsReturnedBefore( 10);
-            break;  //leave loop; 'way' holds the next OSM way to be returned
-        }
-    }
-
-    if (ch == EOF) //already read the whole file -> clean up
-    {
-        fclose(fData);
+    
+    boost::optional<OsmLightweightWay> hasWay = getNextWay();
+    if (!hasWay)
         return mapnik::feature_ptr();
-    }
+        
+    OsmLightweightWay &way = *hasWay;
     
     assert(way.numVertices > 0);
     // create a new feature

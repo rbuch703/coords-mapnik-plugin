@@ -8,8 +8,10 @@
 
 // boost
 #include <boost/scoped_ptr.hpp> // needed for wrapping the transcoder
+#include <boost/optional.hpp>
 
 #include <stdio.h>
+#include "osmMappedTypes.h"
 
 class hello_featureset : public mapnik::Featureset
 {
@@ -25,6 +27,11 @@ public:
 
     bool wasReturnedBefore(uint64_t wayId);
     void markAsReturnedBefore(uint64_t wayId);
+    void buildFileHierarchy(std::string path, std::vector<std::string> &files,
+                            const mapnik::box2d<double> &queryBounds, 
+                            mapnik::box2d<double> tileBounds);
+
+    boost::optional<OsmLightweightWay> getNextWay();
 
 private:
     // members are up to you, but these are recommended
@@ -34,6 +41,7 @@ private:
     mapnik::context_ptr ctx_;
     FILE* fData;
     std::vector<bool> waysReturned;
+    std::vector<std::string> files;
 };
 
 #endif // HELLO_FEATURESET_HPP

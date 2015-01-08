@@ -35,10 +35,8 @@ public:
     OsmLightweightWay();
     OsmLightweightWay( FILE* src);
     OsmLightweightWay( uint8_t* data_ptr);
-    ~OsmLightweightWay ();
-
-    //disable copy constructor
     OsmLightweightWay( const OsmLightweightWay &other);
+    ~OsmLightweightWay ();
 
     OsmLightweightWay &operator=(const OsmLightweightWay &other);
 
