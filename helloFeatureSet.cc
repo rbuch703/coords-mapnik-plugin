@@ -18,7 +18,8 @@ hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
-      ctx_(boost::make_shared<mapnik::context_type>())
+      ctx_(boost::make_shared<mapnik::context_type>()),
+      fData(NULL)
 { 
 
     buildFileHierarchy(path, files, box, mapnik::box2d<double>(-180, -90, 180, 90));
@@ -26,8 +27,7 @@ hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string
     for (std::string &s: files)
         cout << "\t registered file '" << s << "' for parsing" << endl;
 
-    fData = fopen(path.c_str(), "rb");
-//    fData = NULL;
+//    fData = fopen(path.c_str(), "rb");
 
     // the featureset context needs to know the field schema
     ctx_->push("key" ); // let us pretend it just has one column/attribute name "key"
@@ -99,33 +99,42 @@ void hello_featureset::markAsReturnedBefore(uint64_t wayId)
 
 boost::optional<OsmLightweightWay> hello_featureset::getNextWay()
 {
-    int ch;
-
-    while ( (ch = fgetc(fData)) != EOF)
+//    cout << "has " << files.size() << " files." << endl;    
+    while ( files.size() > 0 || fData != NULL)
     {
-        ungetc(ch, fData);
-        OsmLightweightWay way(fData);
-        
-        //cout << way.id << endl;
-        if ( !wasReturnedBefore( way.id) )
+//        cout << "way " << feature_id_ << endl;
+        if (fData == NULL)
         {
-            markAsReturnedBefore( way.id);
-            return way;
+            cout << "opening next file '" << files.back() << "#" << endl;
+            fData = fopen( files.back().c_str(), "rb");
+            files.pop_back();
         }
-    }
 
-    //already read the whole file -> clean up
-    fclose(fData);
+        int ch;
+
+        while ( (ch = fgetc(fData)) != EOF)
+        {
+            ungetc(ch, fData);
+            OsmLightweightWay way(fData);
+            
+            //cout << way.id << endl;
+            if ( !wasReturnedBefore( way.id) )
+            {
+                markAsReturnedBefore( way.id);
+                return way;
+            }
+        }
+
+        //already read the whole file -> clean up
+        fclose(fData);
+        fData = NULL;
+    }
+    
     return boost::none;
 }
 
 mapnik::feature_ptr hello_featureset::next()
-{
-
-    if (!fData)
-    //if (feature_id_ > 1)
-        return mapnik::feature_ptr();
-    
+{    
     boost::optional<OsmLightweightWay> hasWay = getNextWay();
     if (!hasWay)
         return mapnik::feature_ptr();
@@ -134,7 +143,7 @@ mapnik::feature_ptr hello_featureset::next()
     
     assert(way.numVertices > 0);
     // create a new feature
-    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_));
+    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
     //feature->put( "key" ,tr_->transcode("hello world5!") );
     mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);

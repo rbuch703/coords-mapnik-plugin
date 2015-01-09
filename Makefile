@@ -1,38 +1,51 @@
-#CXX = clang++
+
+PLUGIN_SRC = helloDataSource.cc helloFeatureSet.cc mem_map.cc osmMappedTypes.cc osmTypes.cc
+TESTER_SRC = helloDataSource.cc helloFeatureSet.cc mem_map.cc osmMappedTypes.cc osmTypes.cc pluginTest.cc
+
+PLUGIN_OBJ  = $(patsubst %.cc,build/%.o,$(PLUGIN_SRC))
+TESTER_OBJ  = $(patsubst %.cc,build/%.o,$(TESTER_SRC))
 
 CXXFLAGS = -g -fPIC -std=c++11 -Wall -Wextra#$(shell mapnik-config --cflags) 
 
-LIBS = -lmapnik#$(shell mapnik-config --libs --ldflags --dep-libs)
+LD_FLAGS = -lmapnik#$(shell mapnik-config --libs --ldflags --dep-libs)#-fsanitize=address#-flto -O2 #-fprofile-arcs#--as-needed
 
-SRC = helloDataSource.cc helloFeatureSet.cc mem_map.cc osmMappedTypes.cc osmTypes.cc
-OBJ = $(SRC:.cc=.o)
+.PHONY: all clean
 
-BIN = hello.input tester
+all: build make.dep build/tester build/hello.input  
+#build/simplifier build/data_converter
+#	 @echo [ALL] $<
 
-all : $(BIN)
+build:
+	@echo [MKDIR ] $@
+	@mkdir -p build
 
-hello.input : $(OBJ)
-	@echo [LD] $@
-	@$(CXX) -shared $(OBJ) $(LIBS) -o $@
+build/hello.input: $(PLUGIN_OBJ) make.dep
+	@echo [LD ] $@
+	@g++ -shared $(PLUGIN_OBJ) $(LD_FLAGS) -o $@
 
-tester : $(OBJ) pluginTest.cc
-	@echo [LD] $@
-	@$(CXX) $(OBJ) -g pluginTest.cc $(LIBS) -o $@
+build/tester: $(TESTER_OBJ) make.dep
+	@echo [LD ] $@
+	@g++ $(TESTER_OBJ) $(LD_FLAGS) -o $@
 
-%.o: %.cc 
+build/%.o: %.cc 
 	@echo [C++] $<
 	@g++ $(CXXFLAGS) $< -c -o $@
 
-#.cpp.o :
-#	$(CXX) -c $(CXXFLAGS) $< -o $@
-
-.PHONY : clean
-
 clean:
-	rm -f $(OBJ) $(BIN) *~
+	@echo [CLEAN]
+	@rm -rf *~
+	@rm -rf *gcda
+	@rm -rf *gcno
+	@rm -rf coverage.info callgrind.out.*
+	@rm -rf build/*
 
-deploy : hello.input
-	@echo [CP] hello.input "->" $(shell mapnik-config --input-plugins)
-	@cp hello.input $(shell mapnik-config --input-plugins)
+deploy : build/hello.input
+	@echo [CP] build/hello.input "->" $(shell mapnik-config --input-plugins)
+	@cp build/hello.input $(shell mapnik-config --input-plugins)
 
-install: clean all deploy
+make.dep: $(PLUGIN_SRC) $(TESTER_SRC)
+	@echo [DEP]
+	@g++ -MM -MG $^ | sed "s/\([[:graph:]]*\)\.o/build\/\\1.o/g" > make.dep
+
+include make.dep
+

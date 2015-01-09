@@ -70,10 +70,10 @@ mapnik::layer_descriptor hello_datasource::get_descriptor() const
 
 mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
 {
-    //const mapnik::box2d<double> &bbox = q.get_bbox();
-    /*cout << "processing query in bounds " 
+    const mapnik::box2d<double> &bbox = q.get_bbox();
+    cout << "processing query in bounds " 
          << "lat:" << bbox.miny() << " -> " << bbox.maxy() << ", "
-         << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;*/
+         << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;
     for (const std::string s: q.property_names())
         cout << "\texpecting property '" << s << "'" << endl;
 

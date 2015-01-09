@@ -25,16 +25,16 @@ public:
     // mandatory: you must expose a next() method, called when rendering
     mapnik::feature_ptr next();
 
+    boost::optional<OsmLightweightWay> getNextWay();
+
+private:
     bool wasReturnedBefore(uint64_t wayId);
     void markAsReturnedBefore(uint64_t wayId);
     void buildFileHierarchy(std::string path, std::vector<std::string> &files,
                             const mapnik::box2d<double> &queryBounds, 
                             mapnik::box2d<double> tileBounds);
 
-    boost::optional<OsmLightweightWay> getNextWay();
-
 private:
-    // members are up to you, but these are recommended
     mapnik::box2d<double> box_;
     mapnik::value_integer feature_id_;
     boost::scoped_ptr<mapnik::transcoder> tr_;

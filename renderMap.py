@@ -2,8 +2,9 @@
 
 import mapnik
 
-m = mapnik.Map(2048, 2048)
-m.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs"
+m = mapnik.Map(800, 800)
+#m.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs"
+#m.srs = "+proj=eqc"
 m.background = mapnik.Color('steelblue')
 
 # continents
@@ -14,7 +15,7 @@ r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,50%,50%)'),0.1))
 s.rules.append(r)
 m.append_style('My Style',s)
 
-ds = mapnik.Shapefile(file='/home/rbuchhol/Desktop/MapnikPlugin/ne_10m_admin_0_countries.shp')
+ds = mapnik.Shapefile(file='/home/rbuchhol/Desktop/MapnikPlugin/shapefiles/ne_10m_admin_0_countries.shp')
 layer = mapnik.Layer('world')
 layer.datasource = ds
 layer.styles.append('My Style')
@@ -47,7 +48,21 @@ r.max_scale = 136495; #=zoom level 12
 s.rules.append(r)
 
 m.append_style('RoadStyle',s)
-ds = mapnik.Datasource(type='hello', path="/home/rbuchhol/Desktop/MapnikPlugin/data/road")
+ds = mapnik.Datasource(type='hello', path="/home/rbuchhol/Desktop/MapnikPlugin/data/road", geometryType="polygon")
+layer = mapnik.Layer('l4')
+layer.datasource = ds
+layer.styles.append('RoadStyle')
+m.layers.append(layer)
+
+# all buildings
+s = mapnik.Style()
+r = mapnik.Rule()
+r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(50%,75%,50%)'), 1))
+r.max_scale = 136495; #=zoom level 12
+s.rules.append(r)
+
+m.append_style('RoadStyle',s)
+ds = mapnik.Datasource(type='hello', path="/home/rbuchhol/Desktop/MapnikPlugin/data/road", geometryType="polygon")
 layer = mapnik.Layer('l4')
 layer.datasource = ds
 layer.styles.append('RoadStyle')
@@ -74,8 +89,9 @@ m.layers.append(layer)
 
 mapnik.save_map(m, "map.xml");
 
-m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
+#m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
+m.zoom_to_box( mapnik.Box2d(12.8, 52.2,13, 52.4) )
 
 #m.zoom_all()
-mapnik.render_to_file(m,'world.png', 'png')
+mapnik.render_to_file(m, 'world.png', 'png')
 print "rendered image to 'world.png'"
