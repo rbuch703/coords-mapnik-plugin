@@ -7,7 +7,7 @@ TESTER_OBJ  = $(patsubst %.cc,build/%.o,$(TESTER_SRC))
 
 CXXFLAGS = -g -fPIC -std=c++11 -Wall -Wextra#$(shell mapnik-config --cflags) 
 
-LD_FLAGS = -lmapnik#$(shell mapnik-config --libs --ldflags --dep-libs)#-fsanitize=address#-flto -O2 #-fprofile-arcs#--as-needed
+LD_FLAGS = -lmapnik -licuuc #$(shell mapnik-config --libs --ldflags --dep-libs)#-fsanitize=address#-flto -O2 #-fprofile-arcs#--as-needed
 
 .PHONY: all clean
 

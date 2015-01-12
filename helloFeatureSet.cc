@@ -13,6 +13,8 @@
 
 using std::cout;
 using std::endl;
+using std::pair;
+using std::string;
 
 hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
     : box_(box),
@@ -30,7 +32,8 @@ hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> 
 //    fData = fopen(path.c_str(), "rb");
 
     // the featureset context needs to know the field schema
-    ctx_->push("key" ); // let us pretend it just has one column/attribute name "key"
+    for (std::string name : propertyNames)
+        ctx_->push(name );
 }
 
 hello_featureset::~hello_featureset() { }
@@ -159,6 +162,12 @@ mapnik::feature_ptr hello_featureset::next()
         line = new mapnik::geometry_type(mapnik::Polygon);
     else 
         assert(false && "Invalid geometry type");
+        
+    for ( pair<string, string> kv : way.getTags())
+    {
+        if (propertyNames.count(kv.first))
+            feature->put( kv.first, tr_->transcode(kv.second.c_str()));
+    }
 
     double lat = way.vertices[0].lat / 10000000.0;
     double lng = way.vertices[0].lng / 10000000.0;
