@@ -14,13 +14,13 @@
 using std::cout;
 using std::endl;
 
-hello_featureset::hello_featureset(mapnik::box2d<double> const& box, std::string const& encoding, std::string path)
+hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path)
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
       ctx_(boost::make_shared<mapnik::context_type>()),
-      fData(NULL)
-{ 
+      fData(NULL), geometryType(geoType)
+{
 
     buildFileHierarchy(path, files, box, mapnik::box2d<double>(-180, -90, 180, 90));
     
@@ -146,7 +146,14 @@ mapnik::feature_ptr hello_featureset::next()
     mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
     //feature->put( "key" ,tr_->transcode("hello world5!") );
-    mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
+    
+    mapnik::geometry_type * line;
+    if (this->geometryType == LINE)
+        line = new mapnik::geometry_type(mapnik::LineString);
+    else if (this->geometryType == POLYGON)
+        line = new mapnik::geometry_type(mapnik::Polygon);
+    else 
+        assert(false && "Invalid geometry type");
 
     double lat = way.vertices[0].lat / 10000000.0;
     double lng = way.vertices[0].lng / 10000000.0;

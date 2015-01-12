@@ -16,8 +16,10 @@
 class hello_featureset : public mapnik::Featureset
 {
 public:
+    enum GEOMETRY_TYPE {POINT, LINE, POLYGON};
+
     // this constructor can have any arguments you need
-    hello_featureset(mapnik::box2d<double> const& box, std::string const& encoding, std::string path);
+    hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path);
 
     // desctructor
     virtual ~hello_featureset();
@@ -28,6 +30,7 @@ public:
     boost::optional<OsmLightweightWay> getNextWay();
 
 private:
+
     bool wasReturnedBefore(uint64_t wayId);
     void markAsReturnedBefore(uint64_t wayId);
     void buildFileHierarchy(std::string path, std::vector<std::string> &files,
@@ -42,6 +45,7 @@ private:
     FILE* fData;
     std::vector<bool> waysReturned;
     std::vector<std::string> files;
+    GEOMETRY_TYPE geometryType;
 };
 
 #endif // HELLO_FEATURESET_HPP
