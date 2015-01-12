@@ -7,6 +7,9 @@
 
 #include "osmTypes.h"
 
+#include <string.h> //for strlen
+#include <iostream>
+
 template <typename T>
 class ArrayIterator {
 public:
@@ -29,6 +32,52 @@ private:
     const T *beginPos, *endPos;
 };
 
+class Tags{
+public: 
+ Tags( const char* src, int numTags): src(src), numTags(numTags) {}
+ class ConstTagIterator;
+ 
+ 
+ ConstTagIterator begin() { return ConstTagIterator(src, numTags);}
+ ConstTagIterator end()   { return ConstTagIterator(src, 0); }
+ 
+    class ConstTagIterator {
+
+    public:
+        ConstTagIterator( const char* src, uint64_t numTagsLeft): src(src), numTagsLeft(numTagsLeft) 
+        { 
+            //std::cout<< "created tag iterator with " << numTagsLeft << "tags" << std::endl;
+        
+        }
+        ConstTagIterator& operator++() {
+            if (numTagsLeft == 0)
+                assert(false && "reached end of container");
+                
+            const char* key = src;
+            const char* value = key + strlen(src) + 1; //including zero-termination
+            src = value + strlen(value) + 1;
+            numTagsLeft -= 1;
+            return (*this);
+        }
+        
+        std::pair<std::string, std::string> operator *() {
+            const char* key = src;
+            const char* value = key + strlen(src) + 1; //including zero-termination
+            return std::make_pair(key, value);
+        }
+        
+        bool operator !=( ConstTagIterator &other) const {return this->numTagsLeft != other.numTagsLeft;}
+    
+    private:
+        const char* src;
+        uint64_t numTagsLeft;
+    };
+
+private:
+    const char* src;
+    uint64_t numTags;
+
+};
 
 class OsmLightweightWay {
 public:
@@ -41,8 +90,8 @@ public:
     OsmLightweightWay &operator=(const OsmLightweightWay &other);
 
     void serialize( FILE* data_file/*, mmap_t *index_map*/) const;
-    std::map<std::string, std::string> getTags() const;
-    
+    std::map<std::string, std::string> getTagSet() const;
+    Tags getTags() const { return Tags( (char*)tagBytes, numTags);}
     uint64_t size() const;
     bool hasKey(const char* key) const;
     std::string getValue(const char* key) const;

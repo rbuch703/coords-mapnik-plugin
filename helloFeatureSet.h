@@ -11,6 +11,8 @@
 #include <boost/optional.hpp>
 
 #include <stdio.h>
+#include <set>
+#include <string>
 #include "osmMappedTypes.h"
 
 class hello_featureset : public mapnik::Featureset
@@ -19,7 +21,7 @@ public:
     enum GEOMETRY_TYPE {POINT, LINE, POLYGON};
 
     // this constructor can have any arguments you need
-    hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path);
+    hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames);
 
     // desctructor
     virtual ~hello_featureset();
@@ -46,6 +48,7 @@ private:
     std::vector<bool> waysReturned;
     std::vector<std::string> files;
     GEOMETRY_TYPE geometryType;
+    std::set<std::string> propertyNames;
 };
 
 #endif // HELLO_FEATURESET_HPP

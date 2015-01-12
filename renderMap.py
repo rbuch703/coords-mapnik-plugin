@@ -73,6 +73,7 @@ m.layers.append(layer)
 # boundaries
 s = mapnik.Style()
 r = mapnik.Rule()
+r.filter = mapnik.Filter("[admin_level] = '4'");
 ls = mapnik.LineSymbolizer(mapnik.Color('rgb(10%,10%,10%)'), 3);
 ls.stroke.opacity = 0.3;
 r.symbols.append(ls)

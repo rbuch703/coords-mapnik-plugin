@@ -14,12 +14,12 @@
 using std::cout;
 using std::endl;
 
-hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path)
+hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
       ctx_(boost::make_shared<mapnik::context_type>()),
-      fData(NULL), geometryType(geoType)
+      fData(NULL), geometryType(geoType), propertyNames(propertyNames)
 {
 
     buildFileHierarchy(path, files, box, mapnik::box2d<double>(-180, -90, 180, 90));
@@ -140,6 +140,11 @@ mapnik::feature_ptr hello_featureset::next()
         return mapnik::feature_ptr();
         
     OsmLightweightWay &way = *hasWay;
+    
+    for (std::pair<std::string, std::string> kv : way.getTags())
+    {
+        //cout << kv.first << " -> " << kv.second << endl;
+    }
     
     assert(way.numVertices > 0);
     // create a new feature

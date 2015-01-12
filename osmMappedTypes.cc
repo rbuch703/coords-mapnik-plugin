@@ -137,7 +137,7 @@ void OsmLightweightWay::serialize( FILE* dest/*, mmap_t *index_map*/) const
 }
 
 
-std::map<std::string, std::string> OsmLightweightWay::getTags() const
+std::map<std::string, std::string> OsmLightweightWay::getTagSet() const
 {
     map<string, string> tags;
     const char *tagPos = (const char*)this->tagBytes;
