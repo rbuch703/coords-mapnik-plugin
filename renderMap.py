@@ -111,9 +111,9 @@ m.layers.append(layer)
 
 mapnik.save_map(m, "coordsTestStyle.xml");
 
-#m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
+m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
 #m.zoom_to_box( mapnik.Box2d(12.9, 52.3,13, 52.4) )
-m.zoom_to_box( mapnik.Box2d(12, 52,13, 53) )
+#m.zoom_to_box( mapnik.Box2d(12, 52,13, 53) )
 #m.zoom_all()
 mapnik.render_to_file(m, 'world.png', 'png')
 print "rendered image to 'world.png'"
