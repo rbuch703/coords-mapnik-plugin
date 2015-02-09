@@ -13,6 +13,8 @@
 
 using std::cout;
 using std::endl;
+using std::pair;
+using std::string;
 
 coords_featureset::coords_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
     : box_(box),
@@ -168,6 +170,12 @@ mapnik::feature_ptr coords_featureset::next()
         line = new mapnik::geometry_type(mapnik::Polygon);
     else 
         assert(false && "Invalid geometry type");
+        
+    for ( pair<string, string> kv : way.getTags())
+    {
+        if (propertyNames.count(kv.first))
+            feature->put( kv.first, tr_->transcode(kv.second.c_str()));
+    }
 
     double lat = way.vertices[0].lat / 10000000.0;
     double lng = way.vertices[0].lng / 10000000.0;
