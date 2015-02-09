@@ -1,5 +1,5 @@
-#ifndef HELLO_FEATURESET_HPP
-#define HELLO_FEATURESET_HPP
+#ifndef COORDS_FEATURESET_H
+#define COORDS_FEATURESET_H
 
 // mapnik
 #include <mapnik/datasource.hpp>
@@ -15,16 +15,16 @@
 #include <string>
 #include "osmMappedTypes.h"
 
-class hello_featureset : public mapnik::Featureset
+class coords_featureset : public mapnik::Featureset
 {
 public:
     enum GEOMETRY_TYPE {POINT, LINE, POLYGON};
 
     // this constructor can have any arguments you need
-    hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames);
+    coords_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames);
 
     // desctructor
-    virtual ~hello_featureset();
+    virtual ~coords_featureset();
 
     // mandatory: you must expose a next() method, called when rendering
     mapnik::feature_ptr next();
@@ -51,4 +51,4 @@ private:
     std::set<std::string> propertyNames;
 };
 
-#endif // HELLO_FEATURESET_HPP
+#endif

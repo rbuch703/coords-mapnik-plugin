@@ -1,6 +1,6 @@
 // file plugin
-#include "helloDataSource.h"
-#include "helloFeatureSet.h"
+#include "coordsDataSource.h"
+#include "coordsFeatureSet.h"
 
 // boost
 #include <boost/make_shared.hpp>
@@ -14,9 +14,9 @@ using std::string;
 using mapnik::datasource;
 using mapnik::parameters;
 
-DATASOURCE_PLUGIN(hello_datasource)
+DATASOURCE_PLUGIN(coords_datasource)
 
-hello_datasource::hello_datasource(parameters const& params): 
+coords_datasource::coords_datasource(parameters const& params): 
     datasource(params),
     desc_( *params.get<std::string>("type"), *params.get<std::string>("encoding","utf-8")),
     extent_(), path_( *params.get<std::string>("path", "") )
@@ -29,7 +29,7 @@ hello_datasource::hello_datasource(parameters const& params):
     this->init(params);
 }
 
-void hello_datasource::init(mapnik::parameters const& params)
+void coords_datasource::init(mapnik::parameters const& params)
 {
     cout << "initializing plugin '" << name() << "'" << endl;
     for (auto x : params)
@@ -46,35 +46,35 @@ void hello_datasource::init(mapnik::parameters const& params)
     extent_ = mapnik::box2d<double>(-180,-90,180,90);
 }
 
-hello_datasource::~hello_datasource() { }
+coords_datasource::~coords_datasource() { }
 
 // This name must match the plugin filename, eg 'hello.input'
-const char * hello_datasource::name()
+const char * coords_datasource::name()
 {
-    return "hello";
+    return "coords";
 }
 
-mapnik::datasource::datasource_t hello_datasource::type() const
+mapnik::datasource::datasource_t coords_datasource::type() const
 {
     return datasource::Vector;
 }
 
-mapnik::box2d<double> hello_datasource::envelope() const
+mapnik::box2d<double> coords_datasource::envelope() const
 {
     return extent_;
 }
 
-boost::optional<mapnik::datasource::geometry_t> hello_datasource::get_geometry_type() const
+boost::optional<mapnik::datasource::geometry_t> coords_datasource::get_geometry_type() const
 {
     return mapnik::datasource::Collection;
 }
 
-mapnik::layer_descriptor hello_datasource::get_descriptor() const
+mapnik::layer_descriptor coords_datasource::get_descriptor() const
 {
     return desc_;
 }
 
-mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
+mapnik::featureset_ptr coords_datasource::features(mapnik::query const& q) const
 {
     const mapnik::box2d<double> &bbox = q.get_bbox();
     cout << "processing query in bounds " 
@@ -90,14 +90,14 @@ mapnik::featureset_ptr hello_datasource::features(mapnik::query const& q) const
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
-        return boost::make_shared<hello_featureset>((hello_featureset::GEOMETRY_TYPE)geometryType, q.get_bbox(),desc_.get_encoding(), path_, propertyNames);
+        return boost::make_shared<coords_featureset>((coords_featureset::GEOMETRY_TYPE)geometryType, q.get_bbox(),desc_.get_encoding(), path_, propertyNames);
     }
 
     // otherwise return an empty featureset pointer
     return mapnik::featureset_ptr();
 }
 
-mapnik::featureset_ptr hello_datasource::features_at_point(mapnik::coord2d const&, double) const
+mapnik::featureset_ptr coords_datasource::features_at_point(mapnik::coord2d const&, double) const
 {
     // features_at_point is rarely used - only by custom applications,
     // so for this sample plugin let's do nothing...

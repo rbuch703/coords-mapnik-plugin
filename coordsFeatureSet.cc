@@ -5,7 +5,7 @@
 // boost
 #include <boost/make_shared.hpp>
 
-#include "helloFeatureSet.h"
+#include "coordsFeatureSet.h"
 
 #include <iostream>
 #include <unistd.h> //for stat()
@@ -14,7 +14,7 @@
 using std::cout;
 using std::endl;
 
-hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
+coords_featureset::coords_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
@@ -30,12 +30,13 @@ hello_featureset::hello_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> 
 //    fData = fopen(path.c_str(), "rb");
 
     // the featureset context needs to know the field schema
-    ctx_->push("key" ); // let us pretend it just has one column/attribute name "key"
+    for (const std::string &s: propertyNames)
+        ctx_->push(s); // register attributes
 }
 
-hello_featureset::~hello_featureset() { }
+coords_featureset::~coords_featureset() { }
 
-void hello_featureset::buildFileHierarchy(std::string path, std::vector<std::string> &files, 
+void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::string> &files, 
     const mapnik::box2d<double> &queryBounds, mapnik::box2d<double> tileBounds)
 {
     //cout << "tile bounds for " << path << " are " << tileBounds << queryBounds.intersect(tileBounds).valid() << endl;
@@ -69,7 +70,7 @@ void hello_featureset::buildFileHierarchy(std::string path, std::vector<std::str
     buildFileHierarchy( path + "3", files, queryBounds, mapnik::box2d<double>(lngMid, latMin, lngMax, latMid));
 }
 
-bool hello_featureset::wasReturnedBefore(uint64_t wayId)
+bool coords_featureset::wasReturnedBefore(uint64_t wayId)
 {
     if (wayId >= waysReturned.size())
     {
@@ -83,7 +84,7 @@ bool hello_featureset::wasReturnedBefore(uint64_t wayId)
     //return false;
 }
 
-void hello_featureset::markAsReturnedBefore(uint64_t wayId)
+void coords_featureset::markAsReturnedBefore(uint64_t wayId)
 {
     if (wayId >= waysReturned.size())
     {
@@ -97,7 +98,7 @@ void hello_featureset::markAsReturnedBefore(uint64_t wayId)
     waysReturned[wayId] = true;
 }
 
-boost::optional<OsmLightweightWay> hello_featureset::getNextWay()
+boost::optional<OsmLightweightWay> coords_featureset::getNextWay()
 {
 //    cout << "has " << files.size() << " files." << endl;    
     while ( files.size() > 0 || fData != NULL)
@@ -133,24 +134,32 @@ boost::optional<OsmLightweightWay> hello_featureset::getNextWay()
     return boost::none;
 }
 
-mapnik::feature_ptr hello_featureset::next()
+mapnik::feature_ptr coords_featureset::next()
 {    
     boost::optional<OsmLightweightWay> hasWay = getNextWay();
     if (!hasWay)
         return mapnik::feature_ptr();
         
     OsmLightweightWay &way = *hasWay;
-    
+
+    assert(way.numVertices > 0);
+    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
+//    cout << "way has " << way.numVertices << " vertices" << endl;
     for (std::pair<std::string, std::string> kv : way.getTags())
     {
+//        cout << "processing " << kv.first << " = " << kv.second << endl;
+        if (propertyNames.count(kv.first))
+        {
+//            cout << "adding " << kv.first << " = " << kv.second << endl; 
+            feature->put( kv.first ,tr_->transcode(kv.second.c_str()) );
+        }
+//              feature->put( kv.first, kv.second.c_str() );
+             
         //cout << kv.first << " -> " << kv.second << endl;
     }
     
-    assert(way.numVertices > 0);
     // create a new feature
-    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
-    //feature->put( "key" ,tr_->transcode("hello world5!") );
     
     mapnik::geometry_type * line;
     if (this->geometryType == LINE)
@@ -170,40 +179,7 @@ mapnik::feature_ptr hello_featureset::next()
         line->line_to( lng, lat);
     }
         
-    //line->line_to(0,0);
     feature->add_geometry(line);
-    /*
-    // we need a geometry to display so just for fun here
-    // we take the center of the bbox that was used to query
-    // since we don't actually have any data to pull from...
-    mapnik::coord2d center = box_.center();
-
-    // create a new point geometry
-    mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Point);
-
-    // we use path type geometries in Mapnik to fit nicely with AGG and Cairo
-    // here we stick an x,y pair into the geometry using move_to()
-    pt->move_to(center.x,center.y);
-
-    // add the geometry to the feature
-    feature->add_geometry(pt);
-
-    // A feature usually will have just one geometry of a given type
-    // but mapnik does support many geometries per feature of any type
-    // so here we draw a line around the point
-    mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
-    line->move_to(box_.minx(),box_.miny());
-    line->line_to(box_.maxx(),box_.maxy());
-    feature->add_geometry(line); 
-
-    line = new mapnik::geometry_type(mapnik::LineString);
-    line->move_to(box_.minx(),box_.maxy());
-    line->line_to(box_.maxx(),box_.miny());
-    feature->add_geometry(line); */
-
-    //fclose(fData);
-    //fData = NULL;
-    // return the feature!
     return feature;
 
     // otherwise return an empty feature

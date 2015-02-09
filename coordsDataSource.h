@@ -1,5 +1,5 @@
-#ifndef FILE_DATASOURCE_HPP
-#define FILE_DATASOURCE_HPP
+#ifndef COORDS_DATASOURCE_HPP
+#define COORDS_DATASOURCE_HPP
 
 // mapnik
 #include <mapnik/datasource.hpp>
@@ -17,15 +17,15 @@
 // stl
 #include <string>
 
-class hello_datasource : public mapnik::datasource
+class coords_datasource : public mapnik::datasource
 {
 public:
     // constructor
     // arguments must not change
-    hello_datasource(mapnik::parameters const& params);
+    coords_datasource(mapnik::parameters const& params);
 
     // destructor
-    virtual ~hello_datasource ();
+    virtual ~coords_datasource ();
 
     // mandatory: type of the plugin, used to match at runtime
     mapnik::datasource::datasource_t type() const;
