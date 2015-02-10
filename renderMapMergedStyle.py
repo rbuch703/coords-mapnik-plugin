@@ -32,48 +32,18 @@ r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,100%,50%)'),0.5))
 r.min_scale = 136495; # < zoom level 12
 #r.max_scale = 34942642; #=zoom level 4
 s.rules.append(r)
-m.append_style('BigRoadStyle',s)
 
-layer = mapnik.Layer('l2')
-layer.datasource = dsCoords;
-layer.styles.append('BigRoadStyle')
-m.layers.append(layer)
-
-
-# all roads
-s = mapnik.Style()
 r = mapnik.Rule()
 r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,75%,50%)'), 1))
 r.max_scale = 136495; #=zoom level 12
 r.filter = mapnik.Filter("[highway]");
 s.rules.append(r)
 
-m.append_style('RoadStyle',s)
-#ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
-layer = mapnik.Layer('l4')
-layer.datasource = dsCoords
-layer.styles.append('RoadStyle')
-m.layers.append(layer)
-
-# all buildings
-def bldgs():
-    s = mapnik.Style()
-    r = mapnik.Rule()
-    r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(75%,50%,50%)')))
-    r.max_scale = 68247; #=zoom level 12
-    s.rules.append(r)
-
-    m.append_style('BuildingStyle',s)
-    #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node", geometryType="polygon")
-    layer = mapnik.Layer('l5')
-    layer.datasource = dsCoords
-    layer.styles.append('BuildingStyle')
-    m.layers.append(layer)
-
-
-#def dummy():
-# boundaries
-s = mapnik.Style()
+r = mapnik.Rule()
+r.filter = mapnik.Filter("[building]");
+r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(75%,50%,50%)')))
+r.max_scale = 68247; #=zoom level 12
+s.rules.append(r)
 
 r = mapnik.Rule()
 r.max_scale = 1091958 ; #=zoom level 9
@@ -102,14 +72,11 @@ r.symbols.append(ls)
 #r.max_scale = 34942642; #=zoom level 4
 s.rules.append(r)
 
-m.append_style('BoundaryStyle',s)
-#ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
-layer = mapnik.Layer('l3')
+m.append_style('CoordsStyle',s)
+layer = mapnik.Layer('CoordsLayer')
 layer.datasource = dsCoords
-layer.styles.append('BoundaryStyle')
+layer.styles.append('CoordsStyle')
 m.layers.append(layer)
-
-
 
 
 mapnik.save_map(m, "coordsTestStyle.xml");
