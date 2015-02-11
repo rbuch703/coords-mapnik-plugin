@@ -12,15 +12,16 @@ using namespace std;
 
 //==================================
 
-OsmLightweightWay::OsmLightweightWay() : isDataMapped(false), vertices(NULL), numVertices(0), tagBytes(NULL), numTagBytes(0), numTags(0), id(0)
+OsmLightweightWay::OsmLightweightWay() : isDataMapped(false), vertices(NULL), numVertices(0), tagBytes(NULL), numTagBytes(0), numTags(0), id(0), version(0)
 {    
 }
 
 OsmLightweightWay::OsmLightweightWay( FILE* src): 
         isDataMapped(false), vertices(NULL), tagBytes(NULL)
 {
-    MUST( 1 == fread(&this->id, sizeof(this->id), 1, src), "read failure");
-    MUST( 1 == fread(&this->numVertices, sizeof(uint16_t), 1, src), "read failure");
+    MUST( 1 == fread(&this->id,          sizeof(this->id),          1, src), "read failure");
+    MUST( 1 == fread(&this->version,     sizeof(this->version),     1, src), "read failure");
+    MUST( 1 == fread(&this->numVertices, sizeof(this->numVertices), 1, src), "read failure");
         
     if (this->numVertices)
     {
@@ -45,6 +46,10 @@ OsmLightweightWay::OsmLightweightWay( uint8_t *dataPtr):
 {
     this->id = *( (uint64_t*)dataPtr);
     dataPtr += sizeof( uint64_t);
+    
+    this->version = *( (uint32_t*)dataPtr);
+    dataPtr += sizeof( uint32_t);
+    
     this->numVertices = *( (uint16_t*)(dataPtr));
     this->vertices = (OsmGeoPosition*)(dataPtr + 2);
     dataPtr += (2 + sizeof(OsmGeoPosition) * this->numVertices);
@@ -55,7 +60,7 @@ OsmLightweightWay::OsmLightweightWay( uint8_t *dataPtr):
 }
 
 
-OsmLightweightWay::OsmLightweightWay( const OsmLightweightWay &other): isDataMapped(false), vertices(NULL), numVertices(0), tagBytes(NULL), numTagBytes(0), numTags(0), id(0)
+OsmLightweightWay::OsmLightweightWay( const OsmLightweightWay &other): isDataMapped(false), vertices(NULL), numVertices(0), tagBytes(NULL), numTagBytes(0), numTags(0), id(0), version(0)
 {
     if (this == &other) return;
     
@@ -77,6 +82,7 @@ OsmLightweightWay& OsmLightweightWay::operator=(const OsmLightweightWay &other)
     
     
     this->id = other.id;
+    this->version = other.version;
     this->numVertices = other.numVertices;
     this->numTags = other.numTags;
     this->numTagBytes = other.numTagBytes;
@@ -100,7 +106,8 @@ OsmLightweightWay& OsmLightweightWay::operator=(const OsmLightweightWay &other)
 
 
 uint64_t OsmLightweightWay::size() const {
-    return   sizeof(id) 
+    return   sizeof(id)
+           + sizeof(version)
            + sizeof(numVertices) + numVertices* sizeof(OsmGeoPosition) 
            + sizeof(numTags) + sizeof(numTagBytes) + numTagBytes;
 }
@@ -117,10 +124,12 @@ OsmLightweightWay::~OsmLightweightWay()
 
 void OsmLightweightWay::serialize( FILE* dest/*, mmap_t *index_map*/) const
 {
+//    cout << "id: " << this->id << ", numVertices " << this->numVertices <<", numTagBytes " << this->numTagBytes<< endl;
     assert (id > 0);
     //get offset at which the dumped way *starts*
     //uint64_t offset = index_map ? ftello(dest) : 0;
-    MUST(1 == fwrite(&this->id, sizeof(this->id), 1, dest), "write error");
+    MUST(1 == fwrite(&this->id,      sizeof(this->id),      1, dest), "write error");
+    MUST(1 == fwrite(&this->version, sizeof(this->version), 1, dest), "write error");
     
     MUST(this->numVertices <= 2000, "#refs in way beyond what's allowed by spec");
     MUST(1 == fwrite(&this->numVertices, sizeof(this->numVertices), 1, dest), "write error");
@@ -134,6 +143,21 @@ void OsmLightweightWay::serialize( FILE* dest/*, mmap_t *index_map*/) const
     
     if (this->numTagBytes > 0)
         MUST( 1 == fwrite(this->tagBytes, sizeof(uint8_t) * this->numTagBytes, 1, dest), "read failure");
+}
+
+void OsmLightweightWay::touch() {
+    if (!this->isDataMapped)
+        return;
+
+#warning dirty-flagging hack that modifies geometric data
+    for (int i = 0; i < numVertices; i++)
+    {
+        if (vertices[i].lat != INVALID_LAT_LNG && vertices[i].lng != INVALID_LAT_LNG)
+        {
+            vertices[i].lat ^= 0x00000001;	//swap LSB
+            vertices[i].lng ^= 0x00000001;
+        }
+    }        
 }
 
 
@@ -206,6 +230,7 @@ LightweightWayStore::LightweightWayStore(const char* indexFileName, const char* 
     mapWayIndex = init_mmap(indexFileName, true, false);
     mapWayData  = init_mmap(dataFileName, true, true);
 
+    //TODO: MAP_LOCK the way index to see if that solves the contention problem
     madvise( mapWayData.ptr, mapWayData.size, MADV_SEQUENTIAL);
 
 }
@@ -217,7 +242,6 @@ OsmLightweightWay LightweightWayStore::operator[](uint64_t wayId)
     assert(wayIndex[wayId] != 0 && "trying to access non-existent way");
     uint64_t wayPos = wayIndex[wayId];
     return OsmLightweightWay((uint8_t*)mapWayData.ptr + wayPos);
-
 }
 
 bool LightweightWayStore::exists(uint64_t wayId) const
@@ -304,6 +328,8 @@ bool LightweightWayStore::LightweightWayIterator::operator !=( LightweightWayIte
 
 void LightweightWayStore::LightweightWayIterator::advanceToNextWay() {
     uint64_t endPos = host.getMaxNumWays();
+    if (pos >= endPos)
+        return;
     uint64_t *wayIndex = (uint64_t*)host.mapWayIndex.ptr;
     while (wayIndex[pos] == 0 && pos < endPos)
         pos+=1;            
@@ -322,7 +348,7 @@ OsmRelation RelationStore::operator[](uint64_t relationId) const
     uint64_t *relationIndex = (uint64_t*)mapRelationIndex.ptr;
     assert(relationIndex[relationId] != 0 && "trying to access non-existent relation");
     uint64_t dataOffset = relationIndex[relationId];
-    return OsmRelation((uint8_t*)mapRelationData.ptr + dataOffset, relationId);
+    return OsmRelation((uint8_t*)mapRelationData.ptr + dataOffset);
 
 }
 

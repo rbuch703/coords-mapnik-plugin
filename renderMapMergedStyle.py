@@ -21,17 +21,13 @@ layer.datasource = ds
 layer.styles.append('Landcover Style')
 m.layers.append(layer)
 
-dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
 
+
+
+dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords/nodes/node")
 
 # big roads
 s = mapnik.Style()
-r = mapnik.Rule()
-r.filter = mapnik.Filter("[highway] = 'primary' or [highway] = 'trunk' or [highway] = 'motorway'");
-r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,100%,50%)'),0.5))
-r.min_scale = 136495; # < zoom level 12
-#r.max_scale = 34942642; #=zoom level 4
-s.rules.append(r)
 
 r = mapnik.Rule()
 r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,75%,50%)'), 1))
@@ -42,12 +38,11 @@ s.rules.append(r)
 r = mapnik.Rule()
 r.filter = mapnik.Filter("[building]");
 r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(75%,50%,50%)')))
-r.max_scale = 68247; #=zoom level 12
+r.max_scale = 68247; #=zoom level 13
 s.rules.append(r)
 
 r = mapnik.Rule()
-r.max_scale = 1091958 ; #=zoom level 9
-#r.max_scale = 68247; #=zoom level 12
+r.max_scale = 136495; #=zoom level 12
 r.filter = mapnik.Filter("[admin_level] = '6'");
 ls = mapnik.LineSymbolizer(mapnik.Color('rgb(20%,20%,20%)'), 2);
 ls.stroke.opacity = 0.1;
@@ -56,7 +51,7 @@ s.rules.append(r)
 
 
 r = mapnik.Rule()
-r.max_scale = 8735660; #=zoom level 6
+r.max_scale = 136495; #=zoom level 12
 r.filter = mapnik.Filter("[admin_level] = '4'");
 ls = mapnik.LineSymbolizer(mapnik.Color('rgb(10%,10%,10%)'), 1);
 ls.stroke.opacity = 1;
@@ -64,10 +59,10 @@ r.symbols.append(ls)
 s.rules.append(r)
 
 r = mapnik.Rule()
-#r.max_scale = 68247; #=zoom level 12
+r.max_scale = 136495; #=zoom level 12
 r.filter = mapnik.Filter("[admin_level] = '2'");
 ls = mapnik.LineSymbolizer(mapnik.Color('rgb(20%,20%,20%)'), 1);
-#ls.stroke.opacity = 0.3;
+ls.stroke.opacity = 0.3;
 r.symbols.append(ls)
 #r.max_scale = 34942642; #=zoom level 4
 s.rules.append(r)
@@ -77,6 +72,54 @@ layer = mapnik.Layer('CoordsLayer')
 layer.datasource = dsCoords
 layer.styles.append('CoordsStyle')
 m.layers.append(layer)
+
+# ================ high zoom layers
+
+dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords/nodes/lod12")
+
+# big roads
+s = mapnik.Style()
+r = mapnik.Rule()
+r.filter = mapnik.Filter("[highway] = 'primary' or [highway] = 'trunk' or [highway] = 'motorway'");
+r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,100%,50%)'),0.5))
+r.min_scale = 136495; # =< zoom level 12
+r.max_scale = 34942642; #=zoom level 4
+s.rules.append(r)
+
+r = mapnik.Rule()
+r.max_scale = 1091958 ; #=zoom level 9
+r.min_scale = 136495; # < zoom level 12
+r.filter = mapnik.Filter("[admin_level] = '6'");
+ls = mapnik.LineSymbolizer(mapnik.Color('rgb(20%,20%,20%)'), 2);
+ls.stroke.opacity = 0.1;
+r.symbols.append(ls)
+s.rules.append(r)
+
+
+r = mapnik.Rule()
+r.max_scale = 8735660; #=zoom level 6
+r.min_scale = 136495; # <= zoom level 12
+r.filter = mapnik.Filter("[admin_level] = '4'");
+ls = mapnik.LineSymbolizer(mapnik.Color('rgb(10%,10%,10%)'), 1);
+ls.stroke.opacity = 1;
+r.symbols.append(ls)
+s.rules.append(r)
+
+r = mapnik.Rule()
+r.max_scale = 34942642; #=zoom level 4
+r.min_scale = 136495; # < zoom level 12
+r.filter = mapnik.Filter("[admin_level] = '2'");
+ls = mapnik.LineSymbolizer(mapnik.Color('rgb(20%,20%,20%)'), 1);
+ls.stroke.opacity = 0.3;
+r.symbols.append(ls)
+s.rules.append(r)
+
+m.append_style('CoordsLod12Style',s)
+layer = mapnik.Layer('CoordsLod12Layer')
+layer.datasource = dsCoords
+layer.styles.append('CoordsLod12Style')
+m.layers.append(layer)
+# ====================================================
 
 
 mapnik.save_map(m, "coordsTestStyle.xml");

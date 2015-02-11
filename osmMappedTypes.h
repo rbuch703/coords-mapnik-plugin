@@ -4,11 +4,9 @@
 
 /* This file contains classes to work with OSM entities that are stored in memory-mapped files
 */
+#include <string.h>
 
 #include "osmTypes.h"
-
-#include <string.h> //for strlen
-#include <iostream>
 
 template <typename T>
 class ArrayIterator {
@@ -90,6 +88,10 @@ public:
     OsmLightweightWay &operator=(const OsmLightweightWay &other);
 
     void serialize( FILE* data_file/*, mmap_t *index_map*/) const;
+    /* modify data without changing content, to make the underlying pages dirty
+     * and force a writeback. This is mostly used to force linear streaming.
+       writes of the backing mmap, instead of the much slower random access writes */
+    void touch();
     std::map<std::string, std::string> getTagSet() const;
     Tags getTags() const { return Tags( (char*)tagBytes, numTags);}
     uint64_t size() const;
@@ -114,6 +116,7 @@ public:
     uint16_t numTags;
     
     uint64_t id;
+    uint32_t version;
 };
 
 std::ostream& operator<<(std::ostream &out, const OsmLightweightWay &way);
