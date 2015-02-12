@@ -26,13 +26,18 @@ m.layers.append(layer)
 
 dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords/nodes/node")
 
-# big roads
 s = mapnik.Style()
 
 r = mapnik.Rule()
 r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,75%,50%)'), 1))
 r.max_scale = 136495; #=zoom level 12
 r.filter = mapnik.Filter("[highway]");
+s.rules.append(r)
+
+r = mapnik.Rule()
+r.filter = mapnik.Filter("[railway]");
+r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,50%,80%)'),0.5))
+r.max_scale = 136495; # zoom level 12
 s.rules.append(r)
 
 r = mapnik.Rule()
@@ -81,10 +86,18 @@ dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords/
 s = mapnik.Style()
 r = mapnik.Rule()
 r.filter = mapnik.Filter("[highway] = 'primary' or [highway] = 'trunk' or [highway] = 'motorway'");
-r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,100%,50%)'),0.5))
+r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,80%,50%)'),0.5))
 r.min_scale = 136495; # =< zoom level 12
 r.max_scale = 34942642; #=zoom level 4
 s.rules.append(r)
+
+r = mapnik.Rule()
+r.filter = mapnik.Filter("[railway] = 'rail'");
+r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,50%,80%)'),0.5))
+r.min_scale = 136495; # =< zoom level 12
+r.max_scale = 34942642; #=zoom level 4
+s.rules.append(r)
+
 
 r = mapnik.Rule()
 r.max_scale = 1091958 ; #=zoom level 9
