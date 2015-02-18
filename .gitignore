@@ -7,4 +7,9 @@ data/
 world.png
 *.xml
 
-make.dep
+Makefile
+CMakeFiles
+CMakeCache.txt
+tester
+coords.input
+cmake_install.cmake
