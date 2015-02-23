@@ -1,4 +1,4 @@
-This software is licensed under the GNU Affero General Public License version 3 (GNU AGPL-v3).
+This software is licensed under the GNU Lesser General Public License version 2.1.
 
 This plugin allows Mapnik to use COORDS (Chunk-Oriented OSM Render-Data Storage) as a data source for rendering. It does not require any additional services or daemons. Instead, it directly accesses the data files created by COORDS (cf. [http://github.com/rbuch703/coords](http://github.com/rbuch703/coords)).
 

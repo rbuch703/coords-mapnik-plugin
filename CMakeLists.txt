@@ -4,7 +4,7 @@ PROJECT (coords-mapnik-plugin)
 #ADD_EXECUTABLE(tester coordsDataSource.cc coordsFeatureSet.cc mem_map.cc osmMappedTypes.cc osmTypes.cc pluginTest.cc)
 #TARGET_LINK_LIBRARIES( tester -lmapnik -licui18n -licuuc)
 
-SET( CXX_FLAGS "-std=c++11 -Wall -Wextra")
+SET( CXX_FLAGS "-std=c++11 -Wall -Wextra -s")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${CXX_FLAGS}" )
 
 EXECUTE_PROCESS(COMMAND mapnik-config --input-plugins 

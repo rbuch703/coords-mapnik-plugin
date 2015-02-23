@@ -15,7 +15,6 @@ Description: Mapnik Plugin to support COORDS data sources
  storage backend is written from scratch and uses a file-based storage 
  developed specifically to efficiently handle those data queries that are 
  typical when rendering maps from OSM data.
-
  This package contains the Mapnik plugin that allows Mapnik to *read* from
  a COORDS data source. The tools to create and maintain the COORDS storage are
  found in a different package.
