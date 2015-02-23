@@ -1,0 +1,12 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: coords-mapnik-plugin
+Upstream-Contact: Robert Buchholz <rbuch703@gmail.com>
+Source: https://github.com/rbuch703/coords-mapnik-plugin
+
+Files: *
+Copyright: 2014-2015 Robert Buchholz
+License: LGPL-2.1
+Comment: see /usr/share/common-licenses/LGPL-2.1
+
+License: LGPL-2.1
+ see /usr/share/common-licenses/LGPL-2.1
