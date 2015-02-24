@@ -2,4 +2,8 @@
 %:
 	dh $@
 
-#	dpkg-shlibdeps debian/mapnik-input-plugin-coords/usr/lib/mapnik/input/coords.input
+override_dh_shlibdeps:
+	dh_shlibdeps
+	dpkg-shlibdeps \
+           -Tdebian/mapnik-input-plugin-coords.substvars \
+           debian/mapnik-input-plugin-coords/usr/lib/mapnik/input/coords.input
