@@ -5,6 +5,7 @@ ne_10m_admin_0_countries.*
 data/
 
 world.png
+world_roads.png
 *.xml
 
 Makefile
@@ -13,3 +14,4 @@ CMakeCache.txt
 tester
 coords.input
 cmake_install.cmake
+install_manifest.txt

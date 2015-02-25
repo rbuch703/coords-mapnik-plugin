@@ -15,7 +15,7 @@ r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,50%,50%)'),0.1))
 s.rules.append(r)
 m.append_style('My Style',s)
 
-ds = mapnik.Shapefile(file='/home/rbuchhol/Desktop/MapnikPlugin/shapefiles/ne_10m_admin_0_countries.shp')
+ds = mapnik.Shapefile(file='/home/rbuchhol/Desktop/render/ne_10m_admin_0_countries_lakes.shp')
 layer = mapnik.Layer('world')
 layer.datasource = ds
 layer.styles.append('My Style')

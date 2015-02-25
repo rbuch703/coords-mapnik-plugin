@@ -1,8 +1,14 @@
 #! /usr/bin/python2
-
 import mapnik
 
-m = mapnik.Map(2048, 2048)
+coordsTilePath = '/home/rbuchhol/Desktop/coords/nodes'
+shapefilePath  = '/home/rbuchhol/Desktop/render/ne_10m_admin_0_countries_lakes.shp'
+
+
+if not(coordsTilePath[-1] in ['/', '\\']):
+    coordsTilePath += "/"
+
+m = mapnik.Map(2048*2, 2048*2)
 m.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs"
 #m.srs = "+proj=eqc"
 m.background = mapnik.Color('steelblue')
@@ -11,11 +17,11 @@ m.background = mapnik.Color('steelblue')
 s = mapnik.Style()
 r = mapnik.Rule()
 r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('#f2eff9')))
-r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,50%,50%)'),0.1))
+#r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(50%,50%,50%)'),0.1))
 s.rules.append(r)
 m.append_style('Landcover Style',s)
 
-ds = mapnik.Shapefile(file='/home/rbuchhol/Desktop/coords-mapnik-plugin/shapefiles/ne_10m_admin_0_countries.shp')
+ds = mapnik.Shapefile(file=shapefilePath)
 layer = mapnik.Layer('world')
 layer.datasource = ds
 layer.styles.append('Landcover Style')
@@ -24,7 +30,7 @@ m.layers.append(layer)
 
 
 
-dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords/nodes/node")
+dsCoords = mapnik.Datasource(type='coords', path= coordsTilePath + "node")
 
 s = mapnik.Style()
 
@@ -80,7 +86,7 @@ m.layers.append(layer)
 
 # ================ high zoom layers
 
-dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords/nodes/lod12")
+dsCoords = mapnik.Datasource(type='coords', path=coordsTilePath +"lod12")
 
 # big roads
 s = mapnik.Style()
@@ -141,5 +147,5 @@ m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
 #m.zoom_to_box( mapnik.Box2d(10, 48,13, 53) )
 #m.zoom_to_box( mapnik.Box2d(12, 52,13, 53) )
 #m.zoom_all()
-mapnik.render_to_file(m, 'world.png', 'png')
-print "rendered image to 'world.png'"
+mapnik.render_to_file(m, 'world_roads.png', 'png')
+print "rendered image to 'world_roads.png'"

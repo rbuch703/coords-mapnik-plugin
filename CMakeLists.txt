@@ -1,6 +1,7 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 
 PROJECT (coords-mapnik-plugin)
+#SET(CMAKE_BUILD_TYPE Release)
 #ADD_EXECUTABLE(tester coordsDataSource.cc coordsFeatureSet.cc mem_map.cc osmMappedTypes.cc osmTypes.cc pluginTest.cc)
 #TARGET_LINK_LIBRARIES( tester -lmapnik -licui18n -licuuc)
 
@@ -21,4 +22,7 @@ SET_TARGET_PROPERTIES(coords.input PROPERTIES SUFFIX "") #remove trailing ".so" 
 
 INSTALL (TARGETS coords.input DESTINATION ${MAPNIK_PLUGIN_DIR} )
 
-#SET(CMAKE_BUILD_TYPE Release)
+INSTALL (FILES renderMapMergedStyle.py  DESTINATION /usr/share/coords/ PERMISSIONS WORLD_EXECUTE OWNER_EXECUTE GROUP_EXECUTE WORLD_READ OWNER_READ GROUP_READ OWNER_WRITE)
+INSTALL (FILES testMapnik.py DESTINATION /usr/share/coords/ PERMISSIONS WORLD_EXECUTE OWNER_EXECUTE GROUP_EXECUTE WORLD_READ OWNER_READ GROUP_READ OWNER_WRITE)
+
+
