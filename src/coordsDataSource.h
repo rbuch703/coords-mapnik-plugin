@@ -45,7 +45,7 @@ public:
     // called during rendering to determine if the layer should be processed
     mapnik::box2d<double> envelope() const;
 
-    // mandatory: optionally return the overal geometry type of the datasource
+    // mandatory: optionally return the overall geometry type of the datasource
     boost::optional<mapnik::datasource::geometry_t> get_geometry_type() const;
 
     // mandatory: return the layer descriptor

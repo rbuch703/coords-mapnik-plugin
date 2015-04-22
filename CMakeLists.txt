@@ -16,9 +16,8 @@ EXECUTE_PROCESS(COMMAND mapnik-config --input-plugins
 ADD_LIBRARY(coords.input SHARED 
     src/coordsDataSource.cc 
     src/coordsFeatureSet.cc
-    src/mem_map.cc 
-    src/osmMappedTypes.cc 
-    src/osmTypes.cc)
+    src/genericGeometry.cc
+)
 
 TARGET_LINK_LIBRARIES( coords.input -lmapnik -licui18n -licuuc)
 

@@ -31,24 +31,21 @@ coords_datasource::coords_datasource(parameters const& params):
 
 void coords_datasource::init(mapnik::parameters const& params)
 {
-    cout << "initializing plugin '" << name() << "'" << endl;
+    cout << "initializing plugin '" << name() << "' with parameters: " << endl;
     for (auto x : params)
     {
-        cout << x.first << " : " <<*params.get<std::string>(x.first) << endl;
+        cout << "\t" << x.first << " : " <<*params.get<std::string>(x.first) << endl;
         //int val = x.second;
         
     }
-    // every datasource must have some way of reporting its extent
-    // in this case we are not actually reading from any data so for fun
-    // let's just create a world extent in Mapnik's default srs:
-    // '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs' (equivalent to +init=epsg:4326)
-    // see http://spatialreference.org/ref/epsg/4326/ for more details
+    
+    // don't know the actual datasource geographic extent, so set it to cover the whole world
     extent_ = mapnik::box2d<double>(-180,-90,180,90);
 }
 
 coords_datasource::~coords_datasource() { }
 
-// This name must match the plugin filename, eg 'hello.input'
+// This name must match the plugin filename
 const char * coords_datasource::name()
 {
     return "coords";
@@ -90,7 +87,7 @@ mapnik::featureset_ptr coords_datasource::features(mapnik::query const& q) const
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
-        return boost::make_shared<coords_featureset>((coords_featureset::GEOMETRY_TYPE)geometryType, q.get_bbox(),desc_.get_encoding(), path_, propertyNames);
+        return boost::make_shared<coords_featureset>(q.get_bbox(),desc_.get_encoding(), path_, propertyNames);
     }
 
     // otherwise return an empty featureset pointer

@@ -16,12 +16,14 @@ using std::endl;
 using std::pair;
 using std::string;
 
-coords_featureset::coords_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double> const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
+typedef mapnik::box2d<double> Box2D;
+
+coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
       ctx_(boost::make_shared<mapnik::context_type>()),
-      fData(NULL), geometryType(geoType), propertyNames(propertyNames)
+      fData(NULL)/*, geometryType(geoType)*/, propertyNames(propertyNames)
 {
 
     buildFileHierarchy(path, files, box, mapnik::box2d<double>(-180, -90, 180, 90));
@@ -39,7 +41,7 @@ coords_featureset::coords_featureset(GEOMETRY_TYPE geoType, mapnik::box2d<double
 coords_featureset::~coords_featureset() { }
 
 void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::string> &files, 
-    const mapnik::box2d<double> &queryBounds, mapnik::box2d<double> tileBounds)
+    const mapnik::box2d<double> &queryBounds, Box2D tileBounds)
 {
     //cout << "tile bounds for " << path << " are " << tileBounds << queryBounds.intersect(tileBounds).valid() << endl;
     //if current tile is outside the query bounds
@@ -66,41 +68,76 @@ void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::st
     double lngMax = tileBounds.maxx();
     double lngMid = (lngMin + lngMax) / 2.0;        
 
-    buildFileHierarchy( path + "0", files, queryBounds, mapnik::box2d<double>(lngMin, latMid, lngMid, latMax));
-    buildFileHierarchy( path + "1", files, queryBounds, mapnik::box2d<double>(lngMid, latMid, lngMax, latMax));
-    buildFileHierarchy( path + "2", files, queryBounds, mapnik::box2d<double>(lngMin, latMin, lngMid, latMid));
-    buildFileHierarchy( path + "3", files, queryBounds, mapnik::box2d<double>(lngMid, latMin, lngMax, latMid));
+    buildFileHierarchy( path + "0", files, queryBounds, Box2D(lngMin, latMid, lngMid, latMax));
+    buildFileHierarchy( path + "1", files, queryBounds, Box2D(lngMid, latMid, lngMax, latMax));
+    buildFileHierarchy( path + "2", files, queryBounds, Box2D(lngMin, latMin, lngMid, latMid));
+    buildFileHierarchy( path + "3", files, queryBounds, Box2D(lngMid, latMin, lngMax, latMid));
 }
 
-bool coords_featureset::wasReturnedBefore(uint64_t wayId)
+bool coords_featureset::wasReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId) const
 {
-    if (wayId >= waysReturned.size())
-    {
-        uint64_t oldSize = waysReturned.size();
-        uint64_t newSize = (wayId +1) * 11 / 10;
-        waysReturned.resize( newSize);
-        for (uint64_t i = oldSize; i < newSize; i++)
-            waysReturned[i] = false;
-    }
-    return waysReturned[wayId];
-    //return false;
-}
 
-void coords_featureset::markAsReturnedBefore(uint64_t wayId)
-{
-    if (wayId >= waysReturned.size())
+    switch (entityType)
     {
-        uint64_t oldSize = waysReturned.size();
-        uint64_t newSize = (wayId +1) * 11 / 10;
-        waysReturned.resize( newSize);
-        for (uint64_t i = oldSize; i < newSize; i++)
-            waysReturned[i] = false;        
+        case OSM_ENTITY_TYPE::NODE: 
+            return nodesReturned.count(entityId);
+        
+        case OSM_ENTITY_TYPE::WAY:  
+            return entityId >= waysReturned.size() ? false : waysReturned[entityId];
+            
+        case OSM_ENTITY_TYPE::RELATION: 
+            return entityId >= relationsReturned.size() ? false : relationsReturned[entityId];
+
+        default: 
+            assert(false && "invalid entity type");
+            return false;
     }
     
-    waysReturned[wayId] = true;
+
 }
 
-boost::optional<OsmLightweightWay> coords_featureset::getNextWay()
+void coords_featureset::markAsReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId)
+{
+    switch (entityType)
+    {
+        case OSM_ENTITY_TYPE::NODE: 
+            nodesReturned.insert(entityId);
+            return;
+        
+        case OSM_ENTITY_TYPE::WAY:  
+            if (entityId >= waysReturned.size())
+            {
+                uint64_t oldSize = waysReturned.size();
+                uint64_t newSize = (entityId + 1) * 11 / 10;
+                waysReturned.resize( newSize);
+                for (uint64_t i = oldSize; i < newSize; i++)
+                    waysReturned[i] = false;        
+            }
+            
+            waysReturned[entityId] = true;
+            return;
+            
+        case OSM_ENTITY_TYPE::RELATION: 
+            if (entityId >= relationsReturned.size())
+            {
+                uint64_t oldSize = relationsReturned.size();
+                uint64_t newSize = (entityId + 1) * 11 / 10;
+                relationsReturned.resize( newSize);
+                for (uint64_t i = oldSize; i < newSize; i++)
+                    relationsReturned[i] = false;        
+            }
+            
+            relationsReturned[entityId] = true;
+            return;
+
+        default: 
+            assert(false && "invalid entity type");
+            return;
+    }
+
+}
+
+boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
 {
 //    cout << "has " << files.size() << " files." << endl;    
     while ( files.size() > 0 || fData != NULL)
@@ -118,13 +155,13 @@ boost::optional<OsmLightweightWay> coords_featureset::getNextWay()
         while ( (ch = fgetc(fData)) != EOF)
         {
             ungetc(ch, fData);
-            OsmLightweightWay way(fData);
+            GenericGeometry geom(fData);
             
             //cout << way.id << endl;
-            if ( !wasReturnedBefore( way.id) )
+            if ( !wasReturnedBefore( geom.getEntityType(), geom.getEntityId() ))
             {
-                markAsReturnedBefore( way.id);
-                return way;
+                markAsReturnedBefore( geom.getEntityType(), geom.getEntityId());
+                return geom;
             }
         }
 
@@ -138,16 +175,16 @@ boost::optional<OsmLightweightWay> coords_featureset::getNextWay()
 
 mapnik::feature_ptr coords_featureset::next()
 {    
-    boost::optional<OsmLightweightWay> hasWay = getNextWay();
-    if (!hasWay)
+    boost::optional<GenericGeometry> hasGeom = getNextGeometry();
+    if (!hasGeom)
         return mapnik::feature_ptr();
         
-    OsmLightweightWay &way = *hasWay;
+    GenericGeometry &geom = *hasGeom;
 
-    assert(way.numVertices > 0);
+    //assert(way.numVertices > 0);
     mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
-//    cout << "way has " << way.numVertices << " vertices" << endl;
-    for (std::pair<std::string, std::string> kv : way.getTags())
+
+    for (Tag &kv : geom.getTags())
     {
 //        cout << "processing " << kv.first << " = " << kv.second << endl;
         if (propertyNames.count(kv.first))
@@ -162,7 +199,7 @@ mapnik::feature_ptr coords_featureset::next()
     
     // create a new feature
 
-    
+    /*
     mapnik::geometry_type * line;
     if (this->geometryType == LINE)
         line = new mapnik::geometry_type(mapnik::LineString);
@@ -175,8 +212,10 @@ mapnik::feature_ptr coords_featureset::next()
     {
         if (propertyNames.count(kv.first))
             feature->put( kv.first, tr_->transcode(kv.second.c_str()));
-    }
-
+    }*/
+    
+    #warning code to parse and pass geometry is missing
+    /*
     double lat = way.vertices[0].lat / 10000000.0;
     double lng = way.vertices[0].lng / 10000000.0;
     line->move_to( lng, lat);
@@ -188,8 +227,9 @@ mapnik::feature_ptr coords_featureset::next()
     }
         
     feature->add_geometry(line);
-    return feature;
+    return feature;*/
 
     // otherwise return an empty feature
+    return mapnik::feature_ptr();
 }
 
