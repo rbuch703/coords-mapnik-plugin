@@ -19,6 +19,7 @@ typedef std::pair<std::string, std::string> Tag;
 class GenericGeometry {
 public:
     GenericGeometry(FILE* f);
+    GenericGeometry(const GenericGeometry &other);
     ~GenericGeometry();
     
     FEATURE_TYPE getFeatureType() const;    //POINT/LINE/POLYGON
@@ -26,6 +27,7 @@ public:
     uint64_t getEntityId() const;
     Envelope getBounds() const;    
     std::vector<Tag> getTags() const;
+    const uint8_t* getGeometryPtr() const;
 private:
     Envelope getLineBounds() const;
     Envelope getPolygonBounds() const;

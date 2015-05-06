@@ -157,6 +157,7 @@ boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
             ungetc(ch, fData);
             GenericGeometry geom(fData);
             
+            //cout << "read geometry " << geom.getEntityType() << " " << geom.getEntityId() << endl;
             //cout << way.id << endl;
             if ( !wasReturnedBefore( geom.getEntityType(), geom.getEntityId() ))
             {
@@ -172,6 +173,79 @@ boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
     
     return boost::none;
 }
+
+//scaling factor from OSM's coordinate integer values to actual lat/lng
+static const double INT_TO_LAT_LNG = 1/10000000.0;
+
+mapnik::feature_ptr parsePointGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
+{
+    const int32_t* pos = (const int32_t*) (geom.getGeometryPtr());
+    double lat = pos[0] * INT_TO_LAT_LNG;
+    double lng = pos[1] * INT_TO_LAT_LNG;
+
+    mapnik::geometry_type * point = new mapnik::geometry_type(mapnik::Point);
+    point->move_to( lat, lng);
+    feature->add_geometry(point);
+    return feature;    
+}
+
+mapnik::feature_ptr parseLineGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
+{
+    const uint8_t* geoPtr = geom.getGeometryPtr();
+    uint32_t numPoints = *(const uint32_t*)geoPtr;
+    if (numPoints == 0)
+        return feature;
+        
+    const int32_t* pos = (int32_t*)(geoPtr + sizeof(uint32_t));
+    
+    mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
+    line->move_to( pos[1] * INT_TO_LAT_LNG, 
+                   pos[0] * INT_TO_LAT_LNG);
+    
+    // skip over 0th point, it was processed by move_to()
+    for (uint64_t i = 1; i < numPoints; i++)
+    {
+        line->line_to( pos[2*i+1] * INT_TO_LAT_LNG, 
+                       pos[2*i  ] * INT_TO_LAT_LNG);
+    }
+    
+    feature->add_geometry(line);
+    return feature;    
+}
+
+mapnik::feature_ptr parsePolygonGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
+{
+    const uint8_t* geoPtr = geom.getGeometryPtr();
+    
+    uint32_t numRings =  *(const uint32_t*)geoPtr;
+    geoPtr += sizeof(uint32_t);
+            
+    while (numRings--)
+    {
+        uint32_t numPoints = *(const uint32_t*)geoPtr;
+        assert(numPoints < 10000000 && "overflow");
+        if (numPoints == 0)
+            return feature;
+            
+        const int32_t* pos = (int32_t*)(geoPtr + sizeof(uint32_t));
+        geoPtr = (const uint8_t*)&pos[2*numPoints];
+            
+        mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::Polygon);
+        line->move_to( pos[1] * INT_TO_LAT_LNG, 
+                       pos[0] * INT_TO_LAT_LNG);
+        
+        // skip over 0th point, it was processed by move_to()
+        for (uint64_t i = 1; i < numPoints; i++)
+        {
+            line->line_to( pos[2*i+1] * INT_TO_LAT_LNG, 
+                           pos[2*i  ] * INT_TO_LAT_LNG);
+        }
+        
+        feature->add_geometry(line);
+    }
+    return feature;    
+}
+
 
 mapnik::feature_ptr coords_featureset::next()
 {    
@@ -189,7 +263,7 @@ mapnik::feature_ptr coords_featureset::next()
 //        cout << "processing " << kv.first << " = " << kv.second << endl;
         if (propertyNames.count(kv.first))
         {
-//            cout << "adding " << kv.first << " = " << kv.second << endl; 
+            //cout << "adding " << kv.first << " = " << kv.second << endl; 
             feature->put( kv.first ,tr_->transcode(kv.second.c_str()) );
         }
 //              feature->put( kv.first, kv.second.c_str() );
@@ -197,39 +271,14 @@ mapnik::feature_ptr coords_featureset::next()
         //cout << kv.first << " -> " << kv.second << endl;
     }
     
-    // create a new feature
-
-    /*
-    mapnik::geometry_type * line;
-    if (this->geometryType == LINE)
-        line = new mapnik::geometry_type(mapnik::LineString);
-    else if (this->geometryType == POLYGON)
-        line = new mapnik::geometry_type(mapnik::Polygon);
-    else 
-        assert(false && "Invalid geometry type");
-        
-    for ( pair<string, string> kv : way.getTags())
+    switch (geom.getFeatureType())
     {
-        if (propertyNames.count(kv.first))
-            feature->put( kv.first, tr_->transcode(kv.second.c_str()));
-    }*/
-    
-    #warning code to parse and pass geometry is missing
-    /*
-    double lat = way.vertices[0].lat / 10000000.0;
-    double lng = way.vertices[0].lng / 10000000.0;
-    line->move_to( lng, lat);
-    for (int i = 1; i < way.numVertices; i++)
-    {
-        double lat = way.vertices[i].lat / 10000000.0;
-        double lng = way.vertices[i].lng / 10000000.0;
-        line->line_to( lng, lat);
-    }
-        
-    feature->add_geometry(line);
-    return feature;*/
-
-    // otherwise return an empty feature
-    return mapnik::feature_ptr();
+        case FEATURE_TYPE::POINT:   return parsePointGeometry(   geom, feature); 
+        case FEATURE_TYPE::LINE:    return parseLineGeometry(    geom, feature);
+        case FEATURE_TYPE::POLYGON: return parsePolygonGeometry( geom, feature);
+        default :
+            assert(false && "invalid feature type"); 
+            return mapnik::feature_ptr(); 
+    }    
 }
 

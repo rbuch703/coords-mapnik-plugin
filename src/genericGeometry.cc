@@ -47,6 +47,7 @@ std::vector<Tag> GenericGeometry::getTags() const
     2. if is not symbolic --> zero-terminated string
 */
     uint32_t numTagBytes = *(uint32_t*)tagsStart;
+    //std::cout << "\thas " << numTagBytes << "b of tags."<< std::endl;
     tagsStart += sizeof(uint32_t);
     MUST( tagsStart + numTagBytes < this->bytes + this->numBytes, "overflow" );
     uint8_t *pos = tagsStart;
@@ -54,7 +55,7 @@ std::vector<Tag> GenericGeometry::getTags() const
     uint16_t numTags = *(uint16_t*)pos;
     pos += sizeof(uint16_t);
     
-    std::cout << "geometry has " << numTags << " tags" << std::endl;
+    //std::cout << "geometry has " << numTags << " tags" << std::endl;
     uint64_t numNames = numTags * 2;
     uint64_t numSymbolicNameBytes = (numNames + 7) / 8;
     while (numSymbolicNameBytes--)
@@ -80,8 +81,20 @@ std::vector<Tag> GenericGeometry::getTags() const
 }
 
 
+const uint8_t* GenericGeometry::getGeometryPtr() const
+{
+    const uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
+    
+    uint32_t numTagBytes = *(uint32_t*)tagsStart;
+    tagsStart += sizeof(uint32_t);
+    
+    const uint8_t* geomStart =tagsStart + numTagBytes;
+    MUST( geomStart < this->bytes + this->numBytes, "overflow");
+    return geomStart;
+}
 
-GenericGeometry::GenericGeometry(FILE* f) 
+
+GenericGeometry::GenericGeometry(FILE* f)
 {
     MUST(fread( &this->numBytes, sizeof(uint32_t), 1, f) == 1, "feature read error");
     /* there should be no OSM geometry bigger than 50MiB; 
@@ -89,9 +102,19 @@ GenericGeometry::GenericGeometry(FILE* f)
     MUST( this->numBytes < 50*1000*1000, "geometry read error");
     
     this->bytes = new uint8_t[this->numBytes];
-    MUST(fread( this->bytes, this->numBytes, 1, f) == 1, "feature read error");
-    
+    MUST(fread( this->bytes, this->numBytes, 1, f) == 1, "feature read error");    
 }
+
+GenericGeometry::GenericGeometry(const GenericGeometry &other)
+{
+    if (this == &other)
+        return;
+        
+    this->numBytes = other.numBytes;
+    this->bytes = new uint8_t[this->numBytes];
+    memcpy( this->bytes, other.bytes, this->numBytes);
+}
+
 
 GenericGeometry::~GenericGeometry()
 {
