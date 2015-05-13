@@ -2,7 +2,7 @@
 
 build/*
 ne_10m_admin_0_countries.*
-data/
+data
 
 world.png
 world_roads.png
@@ -11,7 +11,7 @@ world_roads.png
 Makefile
 CMakeFiles
 CMakeCache.txt
-tester
+pluginTester
 coords.input
 cmake_install.cmake
 install_manifest.txt

@@ -39,8 +39,11 @@ void coords_datasource::init(mapnik::parameters const& params)
         
     }
     
+    static double HALF_EARTH_CIRCUMFERENCE = 20037508.34;
+    
     // don't know the actual datasource geographic extent, so set it to cover the whole world
-    extent_ = mapnik::box2d<double>(-180,-90,180,90);
+    extent_ = mapnik::box2d<double>(-HALF_EARTH_CIRCUMFERENCE, -HALF_EARTH_CIRCUMFERENCE,
+                                     HALF_EARTH_CIRCUMFERENCE,  HALF_EARTH_CIRCUMFERENCE);
 }
 
 coords_datasource::~coords_datasource() { }

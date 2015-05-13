@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 9), libboost1.54-dev, libmapnik-dev, libicu-dev, cm
 
 Package: mapnik-input-plugin-coords
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, python2
 Description: Mapnik Plugin to support COORDS data sources
  COORDS is a new storage backend for OpenStreetMap render servers. The 
  wide-spread canonical storage backend for OSM is based on Postgres/PostGIS,

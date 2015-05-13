@@ -21,7 +21,8 @@ layer.datasource = ds
 layer.styles.append('Landcover Style')
 m.layers.append(layer)
 
-dsCoords = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
+dsCoordsAreas = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/area")
+dsCoordsLines = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/line")
 
 
 # big roads
@@ -35,7 +36,8 @@ s.rules.append(r)
 m.append_style('BigRoadStyle',s)
 
 layer = mapnik.Layer('l2')
-layer.datasource = dsCoords;
+layer.datasource = dsCoordsLines;
+layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 layer.styles.append('BigRoadStyle')
 m.layers.append(layer)
 
@@ -51,24 +53,24 @@ s.rules.append(r)
 m.append_style('RoadStyle',s)
 #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
 layer = mapnik.Layer('l4')
-layer.datasource = dsCoords
+layer.datasource = dsCoordsLines
+layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 layer.styles.append('RoadStyle')
 m.layers.append(layer)
 
 # all buildings
-def bldgs():
-    s = mapnik.Style()
-    r = mapnik.Rule()
-    r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(75%,50%,50%)')))
-    r.max_scale = 68247; #=zoom level 12
-    s.rules.append(r)
+s = mapnik.Style()
+r = mapnik.Rule()
+r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(75%,50%,50%)')))
+r.max_scale = 68247; #=zoom level 12
+s.rules.append(r)
 
-    m.append_style('BuildingStyle',s)
-    #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node", geometryType="polygon")
-    layer = mapnik.Layer('l5')
-    layer.datasource = dsCoords
-    layer.styles.append('BuildingStyle')
-    m.layers.append(layer)
+m.append_style('BuildingStyle',s)
+#ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node", geometryType="polygon")
+layer = mapnik.Layer('l5')
+layer.datasource = dsCoordsAreas
+layer.styles.append('BuildingStyle')
+m.layers.append(layer)
 
 
 #def dummy():
@@ -105,7 +107,8 @@ s.rules.append(r)
 m.append_style('BoundaryStyle',s)
 #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
 layer = mapnik.Layer('l3')
-layer.datasource = dsCoords
+layer.datasource = dsCoordsLines
+layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 layer.styles.append('BoundaryStyle')
 m.layers.append(layer)
 

@@ -18,6 +18,9 @@ using std::string;
 
 typedef mapnik::box2d<double> Box2D;
 
+static double INT_TO_MERCATOR_METERS = 1/100.0;
+static double HALF_EARTH_CIRCUMFERENCE = 20037508.34;
+
 coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
     : box_(box),
       feature_id_(1),
@@ -26,10 +29,12 @@ coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box
       fData(NULL)/*, geometryType(geoType)*/, propertyNames(propertyNames)
 {
 
-    buildFileHierarchy(path, files, box, mapnik::box2d<double>(-180, -90, 180, 90));
+    buildFileHierarchy(path, files, box, mapnik::box2d<double>(
+        -HALF_EARTH_CIRCUMFERENCE, -HALF_EARTH_CIRCUMFERENCE, 
+         HALF_EARTH_CIRCUMFERENCE,  HALF_EARTH_CIRCUMFERENCE));
     
     for (std::string &s: files)
-        cout << "\t registered file '" << s << "' for parsing" << endl;
+        cout << "    register file '" << s << "'" << endl;
 
 //    fData = fopen(path.c_str(), "rb");
 
@@ -60,18 +65,18 @@ void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::st
     if ( buf.st_size > 0)
         files.push_back(path);
 
-    double latMin = tileBounds.miny();
-    double latMax = tileBounds.maxy();
-    double latMid = (latMin + latMax) / 2.0;
+    double yMin = tileBounds.miny();
+    double yMax = tileBounds.maxy();
+    double yMid = (yMin + yMax) / 2.0;
     
-    double lngMin = tileBounds.minx();
-    double lngMax = tileBounds.maxx();
-    double lngMid = (lngMin + lngMax) / 2.0;        
+    double xMin = tileBounds.minx();
+    double xMax = tileBounds.maxx();
+    double xMid = (xMin + xMax) / 2.0;        
 
-    buildFileHierarchy( path + "0", files, queryBounds, Box2D(lngMin, latMid, lngMid, latMax));
-    buildFileHierarchy( path + "1", files, queryBounds, Box2D(lngMid, latMid, lngMax, latMax));
-    buildFileHierarchy( path + "2", files, queryBounds, Box2D(lngMin, latMin, lngMid, latMid));
-    buildFileHierarchy( path + "3", files, queryBounds, Box2D(lngMid, latMin, lngMax, latMid));
+    buildFileHierarchy( path + "0", files, queryBounds, Box2D(xMin, yMid, xMid, yMax));
+    buildFileHierarchy( path + "1", files, queryBounds, Box2D(xMid, yMid, xMax, yMax));
+    buildFileHierarchy( path + "2", files, queryBounds, Box2D(xMin, yMin, xMid, yMid));
+    buildFileHierarchy( path + "3", files, queryBounds, Box2D(xMid, yMin, xMax, yMid));
 }
 
 bool coords_featureset::wasReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId) const
@@ -174,17 +179,12 @@ boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
     return boost::none;
 }
 
-//scaling factor from OSM's coordinate integer values to actual lat/lng
-static const double INT_TO_LAT_LNG = 1/10000000.0;
-
 mapnik::feature_ptr parsePointGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
 {
     const int32_t* pos = (const int32_t*) (geom.getGeometryPtr());
-    double lat = pos[0] * INT_TO_LAT_LNG;
-    double lng = pos[1] * INT_TO_LAT_LNG;
 
     mapnik::geometry_type * point = new mapnik::geometry_type(mapnik::Point);
-    point->move_to( lat, lng);
+    point->move_to( pos[0] * INT_TO_MERCATOR_METERS, pos[1] * INT_TO_MERCATOR_METERS);
     feature->add_geometry(point);
     return feature;    
 }
@@ -199,14 +199,14 @@ mapnik::feature_ptr parseLineGeometry(const GenericGeometry &geom, mapnik::featu
     const int32_t* pos = (int32_t*)(geoPtr + sizeof(uint32_t));
     
     mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
-    line->move_to( pos[1] * INT_TO_LAT_LNG, 
-                   pos[0] * INT_TO_LAT_LNG);
+    line->move_to( pos[0] * INT_TO_MERCATOR_METERS, 
+                   pos[1] * INT_TO_MERCATOR_METERS);
     
     // skip over 0th point, it was processed by move_to()
     for (uint64_t i = 1; i < numPoints; i++)
     {
-        line->line_to( pos[2*i+1] * INT_TO_LAT_LNG, 
-                       pos[2*i  ] * INT_TO_LAT_LNG);
+        line->line_to( pos[2*i  ] * INT_TO_MERCATOR_METERS, 
+                       pos[2*i+1] * INT_TO_MERCATOR_METERS);
     }
     
     feature->add_geometry(line);
@@ -231,14 +231,14 @@ mapnik::feature_ptr parsePolygonGeometry(const GenericGeometry &geom, mapnik::fe
         geoPtr = (const uint8_t*)&pos[2*numPoints];
             
         mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::Polygon);
-        line->move_to( pos[1] * INT_TO_LAT_LNG, 
-                       pos[0] * INT_TO_LAT_LNG);
+        line->move_to( pos[0] * INT_TO_MERCATOR_METERS, 
+                       pos[1] * INT_TO_MERCATOR_METERS);
         
         // skip over 0th point, it was processed by move_to()
         for (uint64_t i = 1; i < numPoints; i++)
         {
-            line->line_to( pos[2*i+1] * INT_TO_LAT_LNG, 
-                           pos[2*i  ] * INT_TO_LAT_LNG);
+            line->line_to( pos[2*i  ] * INT_TO_MERCATOR_METERS, 
+                           pos[2*i+1] * INT_TO_MERCATOR_METERS);
         }
         
         feature->add_geometry(line);
@@ -258,6 +258,7 @@ mapnik::feature_ptr coords_featureset::next()
     //assert(way.numVertices > 0);
     mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
+    bool hasTags = false;
     for (Tag &kv : geom.getTags())
     {
 //        cout << "processing " << kv.first << " = " << kv.second << endl;
@@ -265,11 +266,19 @@ mapnik::feature_ptr coords_featureset::next()
         {
             //cout << "adding " << kv.first << " = " << kv.second << endl; 
             feature->put( kv.first ,tr_->transcode(kv.second.c_str()) );
+            hasTags = true;
         }
 //              feature->put( kv.first, kv.second.c_str() );
              
         //cout << kv.first << " -> " << kv.second << endl;
     }
+    
+    /* early termination: if the geometry object does not have any of the requested tags,
+     *                    mapnik won't render it. So there is no need to parse the actual
+     *                    geometry.
+     **/
+    if (! hasTags)  
+        return feature;
     
     switch (geom.getFeatureType())
     {
