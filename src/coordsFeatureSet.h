@@ -17,6 +17,11 @@
 #include "genericGeometry.h"
 //#include "osmMappedTypes.h"
 
+// comparator functor
+struct StringLess {
+    bool operator()( const char* p1, const char* p2) const { return strcmp(p1, p2) < 0;};
+};
+
 class coords_featureset : public mapnik::Featureset
 {
 public:
@@ -31,7 +36,7 @@ public:
     // mandatory: you must expose a next() method, called when rendering
     mapnik::feature_ptr next();
 
-    boost::optional<GenericGeometry> getNextGeometry();
+    bool getNextGeometry( GenericGeometry &geoOut);
 
 private:
 
@@ -42,6 +47,7 @@ private:
                             mapnik::box2d<double> tileBounds);
 
 private:
+//    static bool stringLess( const char* p1, const char* p2) { return strcmp(p1, p2) < 0;};
     mapnik::box2d<double> box_;
     mapnik::value_integer feature_id_;
     boost::scoped_ptr<mapnik::transcoder> tr_;
@@ -52,9 +58,12 @@ private:
     std::vector<bool> waysReturned;
     std::vector<bool> relationsReturned;
     
+    GenericGeometry lastReturnedGeometry;
+    
     std::vector<std::string> files;
     GEOMETRY_TYPE geometryType;
-    std::set<std::string> propertyNames;
+    std::set<const char*, StringLess> propertyNames;
+    std::vector<char*> propertyNamesRaw;
 };
 
 #endif

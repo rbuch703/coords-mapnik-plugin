@@ -21,12 +21,12 @@ typedef mapnik::box2d<double> Box2D;
 static double INT_TO_MERCATOR_METERS = 1/100.0;
 static double HALF_EARTH_CIRCUMFERENCE = 20037508.34;
 
-coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> propertyNames)
+coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> pPropertyNames)
     : box_(box),
       feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
       ctx_(boost::make_shared<mapnik::context_type>()),
-      fData(NULL)/*, geometryType(geoType)*/, propertyNames(propertyNames)
+      fData(NULL)/*, geometryType(geoType)*/
 {
 
     buildFileHierarchy(path, files, box, mapnik::box2d<double>(
@@ -37,13 +37,23 @@ coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box
         cout << "    register file '" << s << "'" << endl;
 
 //    fData = fopen(path.c_str(), "rb");
+    
+    for (const std::string & propName : pPropertyNames)
+    {
+        propertyNamesRaw.push_back( strdup(propName.c_str()) );
+        propertyNames.insert(propertyNamesRaw.back());
+    }
 
     // the featureset context needs to know the field schema
     for (const std::string &s: propertyNames)
         ctx_->push(s); // register attributes
 }
 
-coords_featureset::~coords_featureset() { }
+coords_featureset::~coords_featureset() 
+{ 
+    for (char* ch : propertyNamesRaw)
+        free(ch);
+}
 
 void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::string> &files, 
     const mapnik::box2d<double> &queryBounds, Box2D tileBounds)
@@ -142,7 +152,7 @@ void coords_featureset::markAsReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_
 
 }
 
-boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
+bool coords_featureset::getNextGeometry( GenericGeometry &geoOut)
 {
 //    cout << "has " << files.size() << " files." << endl;    
     while ( files.size() > 0 || fData != NULL)
@@ -160,14 +170,14 @@ boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
         while ( (ch = fgetc(fData)) != EOF)
         {
             ungetc(ch, fData);
-            GenericGeometry geom(fData);
+            geoOut.init(fData, true);
             
             //cout << "read geometry " << geom.getEntityType() << " " << geom.getEntityId() << endl;
             //cout << way.id << endl;
-            if ( !wasReturnedBefore( geom.getEntityType(), geom.getEntityId() ))
+            if ( !wasReturnedBefore( geoOut.getEntityType(), geoOut.getEntityId() ))
             {
-                markAsReturnedBefore( geom.getEntityType(), geom.getEntityId());
-                return geom;
+                markAsReturnedBefore( geoOut.getEntityType(), geoOut.getEntityId());
+                return true;
             }
         }
 
@@ -176,7 +186,7 @@ boost::optional<GenericGeometry> coords_featureset::getNextGeometry()
         fData = NULL;
     }
     
-    return boost::none;
+    return false;
 }
 
 mapnik::feature_ptr parsePointGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
@@ -223,11 +233,13 @@ mapnik::feature_ptr parsePolygonGeometry(const GenericGeometry &geom, mapnik::fe
     while (numRings--)
     {
         uint32_t numPoints = *(const uint32_t*)geoPtr;
+        geoPtr += sizeof(uint32_t);
+
         assert(numPoints < 10000000 && "overflow");
         if (numPoints == 0)
-            return feature;
+            continue;
             
-        const int32_t* pos = (int32_t*)(geoPtr + sizeof(uint32_t));
+        const int32_t* pos = (int32_t*)(geoPtr);
         geoPtr = (const uint8_t*)&pos[2*numPoints];
             
         mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::Polygon);
@@ -249,23 +261,21 @@ mapnik::feature_ptr parsePolygonGeometry(const GenericGeometry &geom, mapnik::fe
 
 mapnik::feature_ptr coords_featureset::next()
 {    
-    boost::optional<GenericGeometry> hasGeom = getNextGeometry();
-    if (!hasGeom)
+    if (!getNextGeometry(lastReturnedGeometry))
         return mapnik::feature_ptr();
         
-    GenericGeometry &geom = *hasGeom;
+    GenericGeometry &geom = lastReturnedGeometry;
 
-    //assert(way.numVertices > 0);
     mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
     bool hasTags = false;
-    for (Tag &kv : geom.getTags())
+    for (const pair<const char*, const char*> &kv : geom.getTags())
     {
 //        cout << "processing " << kv.first << " = " << kv.second << endl;
         if (propertyNames.count(kv.first))
         {
             //cout << "adding " << kv.first << " = " << kv.second << endl; 
-            feature->put( kv.first ,tr_->transcode(kv.second.c_str()) );
+            feature->put( kv.first ,tr_->transcode(kv.second) );
             hasTags = true;
         }
 //              feature->put( kv.first, kv.second.c_str() );

@@ -62,6 +62,7 @@ m.layers.append(layer)
 s = mapnik.Style()
 r = mapnik.Rule()
 r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(75%,50%,50%)')))
+r.filter = mapnik.Filter("[building]");
 r.max_scale = 68247; #=zoom level 12
 s.rules.append(r)
 
@@ -69,6 +70,7 @@ m.append_style('BuildingStyle',s)
 #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node", geometryType="polygon")
 layer = mapnik.Layer('l5')
 layer.datasource = dsCoordsAreas
+layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
 layer.styles.append('BuildingStyle')
 m.layers.append(layer)
 
@@ -117,7 +119,10 @@ m.layers.append(layer)
 
 mapnik.save_map(m, "coordsTestStyle.xml");
 
-m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
+#m.zoom_to_box(mapnik.Box2d(-20037508.34,-20037508.34,20037508.34,20037508.34))
+
+m.zoom_to_box(mapnik.Box2d(  -1222.99, 6710560,
+                              20790.9, 6732570))
 #m.zoom_to_box( mapnik.Box2d(10, 48,13, 53) )
 #m.zoom_to_box( mapnik.Box2d(12, 52,13, 53) )
 #m.zoom_all()

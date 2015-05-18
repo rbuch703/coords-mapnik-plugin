@@ -1,4 +1,5 @@
 
+//#include "config.h"
 #include "genericGeometry.h"
 
 #include <string.h>
@@ -34,6 +35,36 @@ static const uint64_t IS_WAY_REFERENCE = 0x8000000000000000ull;
     
 */
 
+RawTags GenericGeometry::getTags() const
+{
+    uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
+/* ON-DISK LAYOUT FOR TAGS:
+    uint32_t numBytes
+    uint16_t numTags (one tag = two names (key + value)
+    uint8_t  isSymbolicName[ceil( (numTags*2)/8)] (bit array)
+    
+    for each name:
+    1. if is symbolic --> one uint8_t index into symbolicNames
+    2. if is not symbolic --> zero-terminated string
+*/
+    uint32_t numTagBytes = *(uint32_t*)tagsStart;
+    //std::cout << "\thas " << numTagBytes << "b of tags."<< std::endl;
+    tagsStart += sizeof(uint32_t);
+    MUST( tagsStart + numTagBytes < this->bytes + this->numBytes, "overflow" );
+    uint8_t *pos = tagsStart;
+    
+    uint16_t numTags = *(uint16_t*)pos;
+    pos += sizeof(uint16_t);
+    
+    //uint8_t *symbolicNameBytes = pos;
+    uint64_t numNames = numTags * 2; // key and value per tag
+    uint64_t numSymbolicNameBytes = (numNames + 7) / 8;
+
+        
+    return RawTags(numTags, numTagBytes - numSymbolicNameBytes - sizeof(uint16_t), pos, pos + numSymbolicNameBytes);
+}
+
+#if 0
 std::vector<Tag> GenericGeometry::getTags() const
 {
     uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
@@ -79,31 +110,49 @@ std::vector<Tag> GenericGeometry::getTags() const
     
     return tags;
 }
+#endif
 
 
 const uint8_t* GenericGeometry::getGeometryPtr() const
 {
-    const uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
+    uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
     
     uint32_t numTagBytes = *(uint32_t*)tagsStart;
     tagsStart += sizeof(uint32_t);
     
-    const uint8_t* geomStart =tagsStart + numTagBytes;
+    uint8_t* geomStart =tagsStart + numTagBytes;
     MUST( geomStart < this->bytes + this->numBytes, "overflow");
     return geomStart;
 }
 
 
-GenericGeometry::GenericGeometry(FILE* f)
+GenericGeometry::GenericGeometry(FILE* f): numBytes(0), numBytesAllocated(0), bytes(nullptr)
+{
+    init(f, false);
+}
+
+GenericGeometry::GenericGeometry(): numBytes(0), numBytesAllocated(0), bytes(nullptr)
+{}
+
+
+void GenericGeometry::init(FILE* f, bool avoidRealloc)
 {
     MUST(fread( &this->numBytes, sizeof(uint32_t), 1, f) == 1, "feature read error");
     /* there should be no OSM geometry bigger than 50MiB; 
        such results are likely just invalid reads */
     MUST( this->numBytes < 50*1000*1000, "geometry read error");
     
-    this->bytes = new uint8_t[this->numBytes];
+    if (!avoidRealloc || this->numBytes > numBytesAllocated)
+    {
+        delete [] this->bytes;
+        this->bytes = new uint8_t[this->numBytes];
+        this->numBytesAllocated = this->numBytes;
+    }
+    
     MUST(fread( this->bytes, this->numBytes, 1, f) == 1, "feature read error");    
 }
+
+
 
 GenericGeometry::GenericGeometry(const GenericGeometry &other)
 {
