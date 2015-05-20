@@ -19,6 +19,7 @@ ADD_LIBRARY(coords.input SHARED
     src/rawTags.cc
     src/symbolicNames.cc
     src/envelope.cc
+    src/varInt.cc
 )
 
 ADD_DEFINITIONS(-DCOORDS_MAPNIK_PLUGIN)
@@ -38,6 +39,7 @@ ADD_EXECUTABLE(pluginTester
                src/envelope.cc
                src/rawTags.cc
                src/symbolicNames.cc
+               src/varInt.cc
                
 )
 TARGET_LINK_LIBRARIES( pluginTester -lmapnik -licui18n -licuuc)
