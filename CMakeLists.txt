@@ -16,7 +16,13 @@ ADD_LIBRARY(coords.input SHARED
     src/coordsDataSource.cc 
     src/coordsFeatureSet.cc
     src/genericGeometry.cc
+    src/rawTags.cc
+    src/symbolicNames.cc
+    src/envelope.cc
 )
+
+ADD_DEFINITIONS(-DCOORDS_MAPNIK_PLUGIN)
+
 
 TARGET_LINK_LIBRARIES( coords.input -lmapnik -licui18n -licuuc)
 
@@ -30,6 +36,8 @@ ADD_EXECUTABLE(pluginTester
                src/coordsFeatureSet.cc
                src/genericGeometry.cc
                src/envelope.cc
+               src/rawTags.cc
+               src/symbolicNames.cc
                
 )
 TARGET_LINK_LIBRARIES( pluginTester -lmapnik -licui18n -licuuc)

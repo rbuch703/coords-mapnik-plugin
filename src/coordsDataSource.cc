@@ -81,6 +81,14 @@ mapnik::featureset_ptr coords_datasource::features(mapnik::query const& q) const
          << "lat:" << bbox.miny() << " -> " << bbox.maxy() << ", "
          << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;
          
+    cout << "\tfilter factor: " << q.get_filter_factor() << endl;
+    cout << "\tscale denominator: " << q.scale_denominator() << endl;
+    
+    //double d1 = 
+    cout << "\tresolution type: " << q.resolution().get<0>()
+         << " / " << q.resolution().get<1>() << endl;
+     
+         
     std::set<string> propertyNames;
     for (const std::string s: q.property_names())
     {

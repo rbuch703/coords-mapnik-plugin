@@ -1,10 +1,10 @@
 
-//#include "config.h"
+#include <string.h>
+
 #include "genericGeometry.h"
 
-#include <string.h>
-#define MUST(action, errMsg) { if (!(action)) {printf("Error: '%s' at %s:%d, exiting...\n", errMsg, __FILE__, __LINE__); abort();}}
-static const uint64_t IS_WAY_REFERENCE = 0x8000000000000000ull;
+#include "config.h"
+
 
 /* ON-DISK LAYOUT FOR GEOMETRY
 :
@@ -38,88 +38,14 @@ static const uint64_t IS_WAY_REFERENCE = 0x8000000000000000ull;
 RawTags GenericGeometry::getTags() const
 {
     uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
-/* ON-DISK LAYOUT FOR TAGS:
-    uint32_t numBytes
-    uint16_t numTags (one tag = two names (key + value)
-    uint8_t  isSymbolicName[ceil( (numTags*2)/8)] (bit array)
-    
-    for each name:
-    1. if is symbolic --> one uint8_t index into symbolicNames
-    2. if is not symbolic --> zero-terminated string
-*/
-    uint32_t numTagBytes = *(uint32_t*)tagsStart;
-    //std::cout << "\thas " << numTagBytes << "b of tags."<< std::endl;
-    tagsStart += sizeof(uint32_t);
-    MUST( tagsStart + numTagBytes < this->bytes + this->numBytes, "overflow" );
-    uint8_t *pos = tagsStart;
-    
-    uint16_t numTags = *(uint16_t*)pos;
-    pos += sizeof(uint16_t);
-    
-    //uint8_t *symbolicNameBytes = pos;
-    uint64_t numNames = numTags * 2; // key and value per tag
-    uint64_t numSymbolicNameBytes = (numNames + 7) / 8;
-
-        
-    return RawTags(numTags, numTagBytes - numSymbolicNameBytes - sizeof(uint16_t), pos, pos + numSymbolicNameBytes);
+    return RawTags(tagsStart);
 }
-
-#if 0
-std::vector<Tag> GenericGeometry::getTags() const
-{
-    uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
-/* ON-DISK LAYOUT FOR TAGS:
-    uint32_t numBytes
-    uint16_t numTags (one tag = two names (key + value)
-    uint8_t  isSymbolicName[ceil( (numTags*2)/8)] (bit array)
-    
-    for each name:
-    1. if is symbolic --> one uint8_t index into symbolicNames
-    2. if is not symbolic --> zero-terminated string
-*/
-    uint32_t numTagBytes = *(uint32_t*)tagsStart;
-    //std::cout << "\thas " << numTagBytes << "b of tags."<< std::endl;
-    tagsStart += sizeof(uint32_t);
-    MUST( tagsStart + numTagBytes < this->bytes + this->numBytes, "overflow" );
-    uint8_t *pos = tagsStart;
-    
-    uint16_t numTags = *(uint16_t*)pos;
-    pos += sizeof(uint16_t);
-    
-    //std::cout << "geometry has " << numTags << " tags" << std::endl;
-    uint64_t numNames = numTags * 2;
-    uint64_t numSymbolicNameBytes = (numNames + 7) / 8;
-    while (numSymbolicNameBytes--)
-    {
-        MUST( *pos == 0, "symbolic tag storage not implemented");
-        pos += 1;
-    }
-    
-    std::vector<Tag> tags;
-    while (numTags--)
-    {
-        MUST( pos < (tagsStart + numTagBytes), "overflow");
-        std::string key = (char*)pos;
-        pos += (key.length() + 1);
-        
-        std::string value=(char*)pos;
-        pos += (value.length() + 1);
-        
-        tags.push_back( make_pair(key, value));
-    }
-    
-    return tags;
-}
-#endif
-
 
 const uint8_t* GenericGeometry::getGeometryPtr() const
 {
     uint8_t* tagsStart = this->bytes + sizeof(uint8_t) + sizeof(uint64_t);
     
     uint32_t numTagBytes = *(uint32_t*)tagsStart;
-    tagsStart += sizeof(uint32_t);
-    
     uint8_t* geomStart =tagsStart + numTagBytes;
     MUST( geomStart < this->bytes + this->numBytes, "overflow");
     return geomStart;
@@ -131,8 +57,11 @@ GenericGeometry::GenericGeometry(FILE* f): numBytes(0), numBytesAllocated(0), by
     init(f, false);
 }
 
+#ifdef COORDS_MAPNIK_PLUGIN
 GenericGeometry::GenericGeometry(): numBytes(0), numBytesAllocated(0), bytes(nullptr)
-{}
+{
+}
+#endif
 
 
 void GenericGeometry::init(FILE* f, bool avoidRealloc)
@@ -220,7 +149,7 @@ Envelope GenericGeometry::getLineBounds() const {
     //skipping beyond 'type' and 'id'
     uint8_t* tagsStart = bytes + sizeof(uint8_t) + sizeof(uint64_t);
     uint32_t numTagBytes = *(uint32_t*)tagsStart;
-    uint32_t *lineStart = (uint32_t*)(tagsStart + sizeof(uint32_t) + numTagBytes);
+    uint32_t *lineStart = (uint32_t*)(tagsStart + numTagBytes);
     uint32_t numPoints = *lineStart;
     
     Envelope env;
@@ -243,7 +172,7 @@ Envelope GenericGeometry::getPolygonBounds() const
     uint8_t* tagsStart = bytes + sizeof(uint8_t) + sizeof(uint64_t);
     uint32_t numTagBytes = *(uint32_t*)tagsStart;
 
-    uint32_t *ringStart = (uint32_t*)(tagsStart + sizeof(uint32_t) + numTagBytes);
+    uint32_t *ringStart = (uint32_t*)(tagsStart + numTagBytes);
   
     uint32_t numRings = *ringStart;
     ringStart +=1;
