@@ -224,7 +224,9 @@ mapnik::feature_ptr parseLineGeometry(const uint8_t* geoPtr, mapnik::feature_ptr
     for (uint64_t i = 1; i < numPoints; i++)
     {
         x += varIntFromBytes(geoPtr, &nBytes);
+        geoPtr += nBytes;
         y += varIntFromBytes(geoPtr, &nBytes);
+        geoPtr += nBytes;
         
         line->line_to( x * INT_TO_MERCATOR_METERS, 
                        y * INT_TO_MERCATOR_METERS);
