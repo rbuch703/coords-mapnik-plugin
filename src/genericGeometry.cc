@@ -5,7 +5,7 @@
 #include "genericGeometry.h"
 
 #ifndef COORDS_MAPNIK_PLUGIN
-    #include "misc/varInt.h"
+#include "misc/varInt.h"
 #else
     #include "varInt.h"
 #endif
@@ -25,18 +25,18 @@
         int32_t lng;
         
    2. type == LINE
-        uint32_t numPoints;
+        varUint numPoints;
         'numPoints' times:
-            int32_t lat;
-            int32_t lng;
+            varInt lat; //delta-encoded
+            varInt lng; //delta-encoded
     
    3. type == POLYGON
-        uint32_t numRings;
+        varUint numRings;
         'numRings' times:
-            uint32_t numPoints;
+            varUint numPoints;
             'numPoints' times:
-                int32_t lat;
-                int32_t lng;
+                varInt lat;
+                varInt lng;
     
 */
 
@@ -152,46 +152,63 @@ Envelope GenericGeometry::getBounds() const
 Envelope GenericGeometry::getLineBounds() const {
     uint8_t *beyond = bytes + numBytes;
     
-    uint32_t *lineStart = (uint32_t*)getGeometryPtr();
-    uint32_t numPoints = *lineStart;
+    const uint8_t *lineStart = getGeometryPtr();
+    int nBytes = 0;
+
+    uint64_t numPoints = varUintFromBytes(lineStart, &nBytes);
+    lineStart += nBytes;
     
     Envelope env;
-    int32_t* points = (int32_t*)(lineStart + 1);
+    int64_t x = 0;
+    int64_t y = 0;
     while (numPoints--)
     {
-        MUST(points + 2 <= (int32_t*)beyond, "out-of-bounds");
-        env.add( points[0], points[1]);
-        points += 2;
+        int64_t dX = varIntFromBytes(lineStart, &nBytes);
+        lineStart += nBytes;
+        int64_t dY = varIntFromBytes(lineStart, &nBytes);
+        lineStart += nBytes;
+        x += dX;
+        y += dY;
+        MUST(lineStart <= beyond, "out-of-bounds");
+        env.add( x, y);
     }
-   
+    
+    MUST( lineStart == beyond, "geometry size mismatch")
     return env;
 }
 
 Envelope GenericGeometry::getPolygonBounds() const 
 {
     uint8_t *beyond = bytes + numBytes;
-    uint32_t *ringStart = (uint32_t*)(getGeometryPtr());
+    const uint8_t *ringStart = getGeometryPtr();
   
-    uint32_t numRings = *ringStart;
-    ringStart +=1;
+    int nBytes = 0;
+    uint64_t numRings = varUintFromBytes(ringStart, &nBytes);
+    ringStart += nBytes;
 
     Envelope env;
     
     while (numRings--)
     {
-        uint32_t numPoints = *ringStart;
-        int32_t* points = (int32_t*)(ringStart + 1);
+        uint32_t numPoints = varUintFromBytes(ringStart, &nBytes);
+        ringStart += nBytes;
         
+        int64_t x = 0;
+        int64_t y = 0;
         while (numPoints--)
         {
-            MUST(points + 2 <= (int32_t*)beyond, "out-of-bounds");
-            env.add( points[0], points[1]);
-            points += 2;
+            int64_t dX = varIntFromBytes(ringStart, &nBytes);
+            ringStart += nBytes;
+            int64_t dY = varIntFromBytes(ringStart, &nBytes);
+            ringStart += nBytes;
+            x += dX;
+            y += dY;
+            MUST(ringStart <= beyond, "out-of-bounds");
+            env.add( x, y);
         }
-
-        ringStart = (uint32_t*)points;
-
     }
+    
+    MUST( ringStart == beyond, "geometry size mismatch");
     return env;
 
 }

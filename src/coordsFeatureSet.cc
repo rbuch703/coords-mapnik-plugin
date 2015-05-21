@@ -6,6 +6,7 @@
 #include <boost/make_shared.hpp>
 
 #include "coordsFeatureSet.h"
+#include "varInt.h"
 
 #include <iostream>
 #include <unistd.h> //for stat()
@@ -199,58 +200,74 @@ mapnik::feature_ptr parsePointGeometry(const GenericGeometry &geom, mapnik::feat
     return feature;    
 }
 
-mapnik::feature_ptr parseLineGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
+mapnik::feature_ptr parseLineGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &feature)
 {
-    const uint8_t* geoPtr = geom.getGeometryPtr();
-    uint32_t numPoints = *(const uint32_t*)geoPtr;
+    int nBytes = 0;
+
+    uint64_t numPoints = varUintFromBytes(geoPtr, &nBytes);
+    geoPtr += nBytes;
+    
     if (numPoints == 0)
         return feature;
         
-    const int32_t* pos = (int32_t*)(geoPtr + sizeof(uint32_t));
+    int64_t x = varIntFromBytes(geoPtr, &nBytes);
+    geoPtr += nBytes;
+    
+    int64_t y = varIntFromBytes(geoPtr, &nBytes);
+    geoPtr += nBytes;
     
     mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
-    line->move_to( pos[0] * INT_TO_MERCATOR_METERS, 
-                   pos[1] * INT_TO_MERCATOR_METERS);
+    line->move_to( x * INT_TO_MERCATOR_METERS, 
+                   y * INT_TO_MERCATOR_METERS);
     
     // skip over 0th point, it was processed by move_to()
     for (uint64_t i = 1; i < numPoints; i++)
     {
-        line->line_to( pos[2*i  ] * INT_TO_MERCATOR_METERS, 
-                       pos[2*i+1] * INT_TO_MERCATOR_METERS);
+        x += varIntFromBytes(geoPtr, &nBytes);
+        y += varIntFromBytes(geoPtr, &nBytes);
+        
+        line->line_to( x * INT_TO_MERCATOR_METERS, 
+                       y * INT_TO_MERCATOR_METERS);
     }
     
     feature->add_geometry(line);
     return feature;    
 }
 
-mapnik::feature_ptr parsePolygonGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
+mapnik::feature_ptr parsePolygonGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &feature)
 {
-    const uint8_t* geoPtr = geom.getGeometryPtr();
-    
-    uint32_t numRings =  *(const uint32_t*)geoPtr;
-    geoPtr += sizeof(uint32_t);
+    int nBytes = 0;
+    uint64_t numRings = varUintFromBytes(geoPtr, &nBytes);
+    geoPtr += nBytes;
             
     while (numRings--)
     {
-        uint32_t numPoints = *(const uint32_t*)geoPtr;
-        geoPtr += sizeof(uint32_t);
+        uint64_t numPoints = varUintFromBytes(geoPtr, &nBytes);
+        geoPtr += nBytes;
 
         assert(numPoints < 10000000 && "overflow");
         if (numPoints == 0)
             continue;
             
-        const int32_t* pos = (int32_t*)(geoPtr);
-        geoPtr = (const uint8_t*)&pos[2*numPoints];
-            
+        int64_t x = varIntFromBytes(geoPtr, &nBytes);
+        geoPtr += nBytes;
+        int64_t y = varIntFromBytes(geoPtr, &nBytes);
+        geoPtr += nBytes;
+        
         mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::Polygon);
-        line->move_to( pos[0] * INT_TO_MERCATOR_METERS, 
-                       pos[1] * INT_TO_MERCATOR_METERS);
+        line->move_to( x * INT_TO_MERCATOR_METERS, 
+                       y * INT_TO_MERCATOR_METERS);
         
         // skip over 0th point, it was processed by move_to()
         for (uint64_t i = 1; i < numPoints; i++)
         {
-            line->line_to( pos[2*i  ] * INT_TO_MERCATOR_METERS, 
-                           pos[2*i+1] * INT_TO_MERCATOR_METERS);
+            x += varIntFromBytes(geoPtr, &nBytes);
+            geoPtr += nBytes;
+            y += varIntFromBytes(geoPtr, &nBytes);
+            geoPtr += nBytes;
+        
+            line->line_to( x * INT_TO_MERCATOR_METERS, 
+                           y * INT_TO_MERCATOR_METERS);
         }
         
         feature->add_geometry(line);
@@ -293,8 +310,8 @@ mapnik::feature_ptr coords_featureset::next()
     switch (geom.getFeatureType())
     {
         case FEATURE_TYPE::POINT:   return parsePointGeometry(   geom, feature); 
-        case FEATURE_TYPE::LINE:    return parseLineGeometry(    geom, feature);
-        case FEATURE_TYPE::POLYGON: return parsePolygonGeometry( geom, feature);
+        case FEATURE_TYPE::LINE:    return parseLineGeometry(    geom.getGeometryPtr(), feature);
+        case FEATURE_TYPE::POLYGON: return parsePolygonGeometry( geom.getGeometryPtr(), feature);
         default :
             assert(false && "invalid feature type"); 
             return mapnik::feature_ptr(); 
