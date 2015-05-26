@@ -77,9 +77,9 @@ mapnik::layer_descriptor coords_datasource::get_descriptor() const
 mapnik::featureset_ptr coords_datasource::features(mapnik::query const& q) const
 {
     const mapnik::box2d<double> &bbox = q.get_bbox();
-    cout << "processing query in bounds " 
-         << "lat:" << bbox.miny() << " -> " << bbox.maxy() << ", "
-         << "lng:" << bbox.minx() << " -> " << bbox.maxx() << endl;
+    cout << "processing query in bounds "
+         << "x:" << bbox.minx() << " -> " << bbox.maxx() << ", "
+         << "y:" << bbox.miny() << " -> " << bbox.maxy() << endl;
          
     cout << "\tfilter factor: " << q.get_filter_factor() << endl;
     cout << "\tscale denominator: " << q.scale_denominator() << endl;
