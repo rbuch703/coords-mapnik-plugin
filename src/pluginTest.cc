@@ -8,7 +8,7 @@ int main()
     coords_featureset featureSet( 
         mapnik::box2d<double>(-20037508.34,-20037508.34,20037508.34,20037508.34), 
         "utf-8", 
-        "/home/rbuchhol/Desktop/coords-mapnik-plugin/data/line", properties);
+        "/home/rbuchhol/Desktop/coords-mapnik-plugin/data/building_", properties);
     
     mapnik::feature_ptr feature;
     while ( (feature = featureSet.next()) != NULL)

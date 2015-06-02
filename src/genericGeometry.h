@@ -16,7 +16,13 @@
 #include <string>
 #include <vector>
 
-enum struct FEATURE_TYPE: uint8_t {POINT, LINE, POLYGON};
+enum struct FEATURE_TYPE: uint8_t {POINT = 0, LINE = 1, POLYGON = 2};
+
+/* new flag byte (not yet in use) to replace the FEATURE_TYPE byte*/
+enum struct GEOMETRY_FLAGS: uint8_t { 
+    POINT = 0, LINE = 1, WAY_POLYGON = 2, RELATION_POLYGON = 3,  // bits 0-1: type
+    IS_DUPLICATE = 4  // bit 2: whether the same geometry has been stored in another tile as well
+};
 
 std::ostream& operator<<(std::ostream& os, FEATURE_TYPE ft);
 std::ostream& operator<<(std::ostream& os, OSM_ENTITY_TYPE et);
@@ -27,13 +33,16 @@ class GenericGeometry {
 public:
     GenericGeometry(FILE* f);
     GenericGeometry(const GenericGeometry &other);
+    GenericGeometry(uint8_t *bytes, uint32_t numBytes, bool takeOwnership);
+
 #ifdef COORDS_MAPNIK_PLUGIN
     GenericGeometry();
 #endif
 
     ~GenericGeometry();
     
-    void init(FILE *F, bool avoidRealloc);
+    void init(FILE *f, bool avoidRealloc);
+    void serialize(FILE* f) const;
     
     FEATURE_TYPE getFeatureType() const;    //POINT/LINE/POLYGON
     OSM_ENTITY_TYPE getEntityType() const;  //NODE/WAY/RELATION
@@ -42,6 +51,8 @@ public:
     //std::vector<Tag> getTags() const;
     RawTags getTags() const;
     const uint8_t* getGeometryPtr() const;
+    bool hasMultipleRings() const;
+
 private:
     Envelope getLineBounds() const;
     Envelope getPolygonBounds() const;

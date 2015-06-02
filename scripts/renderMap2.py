@@ -23,8 +23,12 @@ layer.datasource = ds
 layer.styles.append('Landcover Style')
 m.layers.append(layer)
 
-dsCoordsAreas = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/area")
-dsCoordsLines = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/line")
+dsCoordsAreas = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/area_")
+dsCoordsLines = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/line_")
+
+dsCoordsLanduse = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/landuse_")
+
+dsCoordsBuilding = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/building_")
 
 
 def bigRoads():
@@ -80,7 +84,7 @@ def buildings():
     m.append_style('BuildingStyle',s)
     #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node", geometryType="polygon")
     layer = mapnik.Layer('l5')
-    layer.datasource = dsCoordsAreas
+    layer.datasource = dsCoordsBuilding
     layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
     layer.styles.append('BuildingStyle')
     m.layers.append(layer)
@@ -139,7 +143,7 @@ def landuse():
     m.append_style('LanduseStyle',s)
     #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node", geometryType="polygon")
     layer = mapnik.Layer('l6')
-    layer.datasource = dsCoordsAreas
+    layer.datasource = dsCoordsLanduse
     layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
     layer.styles.append('LanduseStyle')
     m.layers.append(layer)

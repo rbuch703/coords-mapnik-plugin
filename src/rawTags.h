@@ -14,24 +14,28 @@
 #endif
 
 typedef std::vector< std::pair<std::string, std::string> > Tags;
+typedef std::map< std::string, std::string> TagDictionary;
 
 class RawTags 
 {
 public:
-    RawTags(uint64_t numTags, uint64_t numTagBytes, const uint8_t *symbolicNameBits, 
-            const uint8_t* tagsStart);
-            
     RawTags(const uint8_t* src);
 
+    /* returns: a memory buffer to which the Tags have been serialized.
+                the caller takes ownership of the returned memory buffer. */
+    static uint8_t* serialize( const Tags &tags, uint64_t *numBytesOut = nullptr);
     
     static void     serialize( const Tags &tags, FILE* fOut);
 #ifndef COORDS_MAPNIK_PLUGIN
     static void     serialize( const Tags &tags, Chunk &chunk);
 #endif
+    uint64_t serialize( uint8_t * const outputBuffer) const;
+
+    // returns the serialized size of 'Tags', *not* counting the leading numBytes field
     static uint64_t getSerializedSize( const Tags &tags);
     
     uint64_t getSerializedSize() const;
-    std::map< std::string, std::string> asDictionary() const;
+    TagDictionary asDictionary() const;
 
     class RawTagIterator {
     public:
