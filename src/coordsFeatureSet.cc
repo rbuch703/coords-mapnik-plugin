@@ -287,7 +287,6 @@ mapnik::feature_ptr coords_featureset::next()
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
-    bool hasTags = false;
     for (const pair<const char*, const char*> &kv : geom.getTags())
     {
 //        cout << "processing " << kv.first << " = " << kv.second << endl;
@@ -295,19 +294,11 @@ mapnik::feature_ptr coords_featureset::next()
         {
             //cout << "adding " << kv.first << " = " << kv.second << endl; 
             feature->put( kv.first ,tr_->transcode(kv.second) );
-            hasTags = true;
         }
 //              feature->put( kv.first, kv.second.c_str() );
              
         //cout << kv.first << " -> " << kv.second << endl;
     }
-    
-    /* early termination: if the geometry object does not have any of the requested tags,
-     *                    mapnik won't render it. So there is no need to parse the actual
-     *                    geometry.
-     **/
-    if (! hasTags)  
-        return feature;
     
     switch (geom.getFeatureType())
     {

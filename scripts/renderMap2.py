@@ -30,6 +30,25 @@ dsCoordsLanduse = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/
 
 dsCoordsBuilding = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/building_")
 
+dsCoordsWater = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/water_")
+
+
+def water():
+    global m;
+    s = mapnik.Style()
+    r = mapnik.Rule()
+    r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('steelblue')))
+    s.rules.append(r)
+
+    m.append_style('WaterStyle',s)
+
+    layer = mapnik.Layer('l132')
+    layer.datasource = dsCoordsWater;
+    #layer.datasource = dsCoordsLanduse;
+    layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
+    layer.styles.append('WaterStyle')
+    m.layers.append(layer)
+
 
 def bigRoads():
     global m;
@@ -77,8 +96,8 @@ def buildings():
     s = mapnik.Style()
     r = mapnik.Rule()
     r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('rgb(65%,60%,60%)')))
-    r.filter = mapnik.Filter("[building]");
-    r.max_scale = 68247; #=zoom level 12
+    #r.filter = mapnik.Filter("[building]");
+    #r.max_scale = 68247; #=zoom level 12
     s.rules.append(r)
 
     m.append_style('BuildingStyle',s)
@@ -126,11 +145,6 @@ def landuse():
     #r.filter = mapnik.Filter("[landuse]='military'");
     #s.rules.append(r)
 
-    r = mapnik.Rule()
-    r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('steelblue')))
-    r.filter = mapnik.Filter("[landuse]='reservoir' or [landuse]='basin' or [natural]='water' or [waterway]");
-    s.rules.append(r)
-
     #misc
     r = mapnik.Rule()
     r.symbols.append(mapnik.PolygonSymbolizer(mapnik.Color('yellow')))
@@ -147,65 +161,72 @@ def landuse():
     layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
     layer.styles.append('LanduseStyle')
     m.layers.append(layer)
-    
+
+
+
+def admin():
+    s = mapnik.Style()
+
+    r = mapnik.Rule()
+    #r.max_scale = 1091958 ; #=zoom level 9
+    r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '6'");
+    ls = mapnik.LineSymbolizer(mapnik.Color('rgba(60%,30%,30%, 0.3)'), 2);
+    r.symbols.append(ls)
+    s.rules.append(r)
+
+    r = mapnik.Rule()
+    #r.max_scale = 1091958 ; #=zoom level 9
+    r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '5'");
+    ls = mapnik.LineSymbolizer(mapnik.Color('rgba(60%,30%,30%, 0.4)'), 2);
+    r.symbols.append(ls)
+    s.rules.append(r)
+
+
+    r = mapnik.Rule()
+    #r.max_scale = 8735660; #=zoom level 6
+    r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '4'");
+    ls = mapnik.LineSymbolizer(mapnik.Color('rgba(60%,10%,10%, 0.5)'), 3);
+    ls.stroke.opacity = 1;
+    r.symbols.append(ls)
+    s.rules.append(r)
+
+    r = mapnik.Rule()
+    #r.max_scale = 68247; #=zoom level 12
+    r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '3'");
+    ls = mapnik.LineSymbolizer(mapnik.Color('rgba(100%,10%,10%, 0.7)'), 4);
+    #ls.stroke.opacity = 0.3;
+    r.symbols.append(ls)
+    #r.max_scale = 34942642; #=zoom level 4
+    s.rules.append(r)
+
+
+    r = mapnik.Rule()
+    #r.max_scale = 68247; #=zoom level 12
+    r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '2'");
+    ls = mapnik.LineSymbolizer(mapnik.Color('rgba(100%,10%,10%, 0.8)'), 5);
+    #ls.stroke.opacity = 0.3;
+    r.symbols.append(ls)
+    #r.max_scale = 34942642; #=zoom level 4
+    s.rules.append(r)
+
+    m.append_style('BoundaryStyle',s)
+    #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
+    layer = mapnik.Layer('l3')
+    layer.datasource = dsCoordsLines
+    layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
+    layer.styles.append('BoundaryStyle')
+    m.layers.append(layer)
+
+   
 landuse()
 buildings()
-roads()
-bigRoads()
+#roads()
+#bigRoads()
+water()
+#admin()
 
 #def dummy():
 # boundaries
-s = mapnik.Style()
-
-r = mapnik.Rule()
-#r.max_scale = 1091958 ; #=zoom level 9
-r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '6'");
-ls = mapnik.LineSymbolizer(mapnik.Color('rgba(60%,30%,30%, 0.3)'), 2);
-r.symbols.append(ls)
-s.rules.append(r)
-
-r = mapnik.Rule()
-#r.max_scale = 1091958 ; #=zoom level 9
-r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '5'");
-ls = mapnik.LineSymbolizer(mapnik.Color('rgba(60%,30%,30%, 0.4)'), 2);
-r.symbols.append(ls)
-s.rules.append(r)
-
-
-r = mapnik.Rule()
-#r.max_scale = 8735660; #=zoom level 6
-r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '4'");
-ls = mapnik.LineSymbolizer(mapnik.Color('rgba(60%,10%,10%, 0.5)'), 3);
-ls.stroke.opacity = 1;
-r.symbols.append(ls)
-s.rules.append(r)
-
-r = mapnik.Rule()
-#r.max_scale = 68247; #=zoom level 12
-r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '3'");
-ls = mapnik.LineSymbolizer(mapnik.Color('rgba(100%,10%,10%, 0.7)'), 4);
-#ls.stroke.opacity = 0.3;
-r.symbols.append(ls)
-#r.max_scale = 34942642; #=zoom level 4
-s.rules.append(r)
-
-
-r = mapnik.Rule()
-#r.max_scale = 68247; #=zoom level 12
-r.filter = mapnik.Filter("[boundary]='administrative' and [admin_level] = '2'");
-ls = mapnik.LineSymbolizer(mapnik.Color('rgba(100%,10%,10%, 0.8)'), 5);
-#ls.stroke.opacity = 0.3;
-r.symbols.append(ls)
-#r.max_scale = 34942642; #=zoom level 4
-s.rules.append(r)
-
-m.append_style('BoundaryStyle',s)
-#ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
-layer = mapnik.Layer('l3')
-layer.datasource = dsCoordsLines
-layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
-layer.styles.append('BoundaryStyle')
-m.layers.append(layer)
 
 
 
