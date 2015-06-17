@@ -237,8 +237,7 @@ mapnik.save_map(m, "coordsTestStyle.xml");
 
 m.zoom_to_box(mapnik.Box2d(  -700000, 6400000,
                               200000, 7550000))
-#m.zoom_to_box( mapnik.Box2d(10, 48,13, 53) )
-#m.zoom_to_box( mapnik.Box2d(12, 52,13, 53) )
+
 #m.zoom_all()
 mapnik.render_to_file(m, 'world.png', 'png')
 print "rendered image to 'world.png'"

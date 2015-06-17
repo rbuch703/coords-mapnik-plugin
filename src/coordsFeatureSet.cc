@@ -23,13 +23,16 @@ static double INT_TO_MERCATOR_METERS = 1/100.0;
 static double HALF_EARTH_CIRCUMFERENCE = 20037508.34;
 
 coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> pPropertyNames)
-    : box_(box),
-      feature_id_(1),
+    : feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
       ctx_(boost::make_shared<mapnik::context_type>()),
       fData(NULL)/*, geometryType(geoType)*/
 {
 
+    box_ = Envelope( box.minx() / INT_TO_MERCATOR_METERS, 
+                     box.maxx() / INT_TO_MERCATOR_METERS, 
+                     box.miny() / INT_TO_MERCATOR_METERS, 
+                     box.maxy() / INT_TO_MERCATOR_METERS);
     buildFileHierarchy(path, files, box, mapnik::box2d<double>(
         -HALF_EARTH_CIRCUMFERENCE, -HALF_EARTH_CIRCUMFERENCE, 
          HALF_EARTH_CIRCUMFERENCE,  HALF_EARTH_CIRCUMFERENCE));
@@ -190,25 +193,26 @@ bool coords_featureset::getNextGeometry( GenericGeometry &geoOut)
     return false;
 }
 
-mapnik::feature_ptr parsePointGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
+bool parsePointGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
 {
     const int32_t* pos = (const int32_t*) (geom.getGeometryPtr());
 
     mapnik::geometry_type * point = new mapnik::geometry_type(mapnik::Point);
     point->move_to( pos[0] * INT_TO_MERCATOR_METERS, pos[1] * INT_TO_MERCATOR_METERS);
     feature->add_geometry(point);
-    return feature;    
+    return true;
 }
 
-mapnik::feature_ptr parseLineGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &feature)
+bool parseLineGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &feature, const Envelope &bounds)
 {
+    Envelope polygonBounds;
     int nBytes = 0;
 
     uint64_t numPoints = varUintFromBytes(geoPtr, &nBytes);
     geoPtr += nBytes;
     
     if (numPoints == 0)
-        return feature;
+        return false;
         
     int64_t x = varIntFromBytes(geoPtr, &nBytes);
     geoPtr += nBytes;
@@ -219,6 +223,7 @@ mapnik::feature_ptr parseLineGeometry(const uint8_t* geoPtr, mapnik::feature_ptr
     mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
     line->move_to( x * INT_TO_MERCATOR_METERS, 
                    y * INT_TO_MERCATOR_METERS);
+    polygonBounds.add(x, y);
     
     // skip over 0th point, it was processed by move_to()
     for (uint64_t i = 1; i < numPoints; i++)
@@ -230,14 +235,16 @@ mapnik::feature_ptr parseLineGeometry(const uint8_t* geoPtr, mapnik::feature_ptr
         
         line->line_to( x * INT_TO_MERCATOR_METERS, 
                        y * INT_TO_MERCATOR_METERS);
+        polygonBounds.add(x, y);
     }
     
     feature->add_geometry(line);
-    return feature;    
+    return polygonBounds.overlapsWith(bounds);
 }
 
-mapnik::feature_ptr parsePolygonGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &feature)
+bool parsePolygonGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &feature, const Envelope &bounds)
 {
+    Envelope polygonBounds;
     int nBytes = 0;
     uint64_t numRings = varUintFromBytes(geoPtr, &nBytes);
     geoPtr += nBytes;
@@ -255,6 +262,7 @@ mapnik::feature_ptr parsePolygonGeometry(const uint8_t* geoPtr, mapnik::feature_
         geoPtr += nBytes;
         int64_t y = varIntFromBytes(geoPtr, &nBytes);
         geoPtr += nBytes;
+        polygonBounds.add(x, y);
         
         mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::Polygon);
         line->move_to( x * INT_TO_MERCATOR_METERS, 
@@ -270,44 +278,55 @@ mapnik::feature_ptr parsePolygonGeometry(const uint8_t* geoPtr, mapnik::feature_
         
             line->line_to( x * INT_TO_MERCATOR_METERS, 
                            y * INT_TO_MERCATOR_METERS);
+            polygonBounds.add(x, y);
         }
         
         feature->add_geometry(line);
     }
-    return feature;    
+    //cout << bounds << " vs. " << polygonBounds << endl;
+    return bounds.overlapsWith(polygonBounds);
 }
 
 
 mapnik::feature_ptr coords_featureset::next()
-{    
-    if (!getNextGeometry(lastReturnedGeometry))
-        return mapnik::feature_ptr();
-        
-    GenericGeometry &geom = lastReturnedGeometry;
-
-    mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
-
-    for (const pair<const char*, const char*> &kv : geom.getTags())
+{
+    while (getNextGeometry(lastReturnedGeometry))
     {
-//        cout << "processing " << kv.first << " = " << kv.second << endl;
-        if (propertyNames.count(kv.first))
+        
+        GenericGeometry &geom = lastReturnedGeometry;
+
+        mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
+
+        for (const pair<const char*, const char*> &kv : geom.getTags())
         {
-            //cout << "adding " << kv.first << " = " << kv.second << endl; 
-            feature->put( kv.first ,tr_->transcode(kv.second) );
+            if (propertyNames.count(kv.first))
+            {
+                //cout << "adding " << kv.first << " = " << kv.second << endl; 
+                feature->put( kv.first ,tr_->transcode(kv.second) );
+            }
         }
-//              feature->put( kv.first, kv.second.c_str() );
-             
-        //cout << kv.first << " -> " << kv.second << endl;
+        
+        switch (geom.getFeatureType())
+        {
+            case FEATURE_TYPE::POINT:   
+                if (parsePointGeometry( geom, feature)) 
+                    return feature; 
+                break;
+            case FEATURE_TYPE::LINE:    
+                if (parseLineGeometry(  geom.getGeometryPtr(), feature, box_)) 
+                    return feature;
+                break;
+            case FEATURE_TYPE::POLYGON: 
+                if (parsePolygonGeometry(geom.getGeometryPtr(), feature, box_)) 
+                    return feature;
+                break;
+            default :
+                assert(false && "invalid feature type");
+                return mapnik::feature_ptr(); 
+        }
     }
     
-    switch (geom.getFeatureType())
-    {
-        case FEATURE_TYPE::POINT:   return parsePointGeometry(   geom, feature); 
-        case FEATURE_TYPE::LINE:    return parseLineGeometry(    geom.getGeometryPtr(), feature);
-        case FEATURE_TYPE::POLYGON: return parsePolygonGeometry( geom.getGeometryPtr(), feature);
-        default :
-            assert(false && "invalid feature type"); 
-            return mapnik::feature_ptr(); 
-    }    
+    return mapnik::feature_ptr();
+    
 }
 

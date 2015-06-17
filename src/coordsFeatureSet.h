@@ -15,7 +15,7 @@
 #include <string>
 
 #include "genericGeometry.h"
-//#include "osmMappedTypes.h"
+#include "envelope.h"
 
 // comparator functor
 struct StringLess {
@@ -47,8 +47,7 @@ private:
                             mapnik::box2d<double> tileBounds);
 
 private:
-//    static bool stringLess( const char* p1, const char* p2) { return strcmp(p1, p2) < 0;};
-    mapnik::box2d<double> box_;
+    Envelope box_;
     mapnik::value_integer feature_id_;
     boost::scoped_ptr<mapnik::transcoder> tr_;
     mapnik::context_ptr ctx_;
