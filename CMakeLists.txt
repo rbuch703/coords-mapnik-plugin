@@ -1,8 +1,8 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 
 PROJECT (coords-mapnik-plugin)
-SET(CMAKE_BUILD_TYPE Release)
-#SET(CMAKE_BUILD_TYPE Debug)
+#SET(CMAKE_BUILD_TYPE Release)
+SET(CMAKE_BUILD_TYPE Debug)
 
 SET( CXX_FLAGS "-std=c++11 -Wall -Wextra")#-s")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${CXX_FLAGS}" )
@@ -14,7 +14,8 @@ EXECUTE_PROCESS(COMMAND mapnik-config --input-plugins
 
 ADD_LIBRARY(coords.input SHARED 
     src/coordsDataSource.cc 
-    src/coordsFeatureSet.cc
+#    src/coordsFeatureSet.cc
+    src/bufferedCoordsFeatureSet.cc
     src/genericGeometry.cc
     src/rawTags.cc
     src/symbolicNames.cc
@@ -33,7 +34,7 @@ SET_TARGET_PROPERTIES(coords.input PROPERTIES SUFFIX "") #remove trailing ".so" 
 
 ADD_EXECUTABLE(pluginTester
                src/pluginTest.cc 
-               src/coordsDataSource.cc
+#               src/coordsDataSource.cc
                src/coordsFeatureSet.cc
                src/genericGeometry.cc
                src/envelope.cc

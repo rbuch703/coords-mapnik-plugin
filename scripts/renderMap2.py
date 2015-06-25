@@ -32,6 +32,10 @@ dsCoordsBuilding = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop
 
 dsCoordsWater = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/water_")
 
+dsCoordsPoints = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/points_")
+
+dsCoordsRoads = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/road_")
+
 
 def water():
     global m;
@@ -78,14 +82,14 @@ def roads():
     s = mapnik.Style()
     r = mapnik.Rule()
     r.symbols.append(mapnik.LineSymbolizer(mapnik.Color('rgb(0,0,0)'), 0.3))
-    r.max_scale = 136495; #=zoom level 12
-    r.filter = mapnik.Filter("[highway]");
+    #r.max_scale = 136495; #=zoom level 12
+    #r.filter = mapnik.Filter("[highway]");
     s.rules.append(r)
 
     m.append_style('RoadStyle',s)
     #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
     layer = mapnik.Layer('l4')
-    layer.datasource = dsCoordsLines
+    layer.datasource = dsCoordsRoads
     layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
     layer.styles.append('RoadStyle')
     m.layers.append(layer)
@@ -217,13 +221,36 @@ def admin():
     layer.styles.append('BoundaryStyle')
     m.layers.append(layer)
 
+def points():
+    s = mapnik.Style()
+
+    r = mapnik.Rule()
+    #r.max_scale = 1091958 ; #=zoom level 9
+    r.filter = mapnik.Filter("[addr:housenumber]");
+    
+    ts = mapnik.TextSymbolizer(mapnik.Expression("[addr:housenumber]"), 
+                               "DejaVu Sans Book", 10, mapnik.Color("black"));
+    r.symbols.append(ts)
+    
+    r.symbols.append( mapnik.PointSymbolizer());
+    s.rules.append(r)
+
+    m.append_style('HouseNumberStyle',s)
+    #ds = mapnik.Datasource(type='coords', path="/home/rbuchhol/Desktop/coords-mapnik-plugin/data/node")
+    layer = mapnik.Layer('l6')
+    layer.datasource = dsCoordsPoints
+    layer.srs = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs"
+    layer.styles.append('HouseNumberStyle')
+    m.layers.append(layer)
+
    
 landuse()
 buildings()
-#roads()
+roads()
 #bigRoads()
 water()
 #admin()
+#points()
 
 #def dummy():
 # boundaries

@@ -46,12 +46,14 @@ public:
     
     FEATURE_TYPE getFeatureType() const;    //POINT/LINE/POLYGON
     OSM_ENTITY_TYPE getEntityType() const;  //NODE/WAY/RELATION
+    GEOMETRY_FLAGS getGeometryFlags() const;    
     uint64_t getEntityId() const;
+    int8_t getZIndex() const;
     Envelope getBounds() const;    
     //std::vector<Tag> getTags() const;
     RawTags getTags() const;
     const uint8_t* getGeometryPtr() const;
-    bool hasMultipleRings() const;
+    //bool hasMultipleRings() const;
 
 private:
     Envelope getLineBounds() const;

@@ -5,10 +5,11 @@
 // boost
 #include <boost/make_shared.hpp>
 
-#include "coordsFeatureSet.h"
+#include "bufferedCoordsFeatureSet.h"
 #include "varInt.h"
 
 #include <iostream>
+#include <algorithm>
 #include <unistd.h> //for stat()
 #include <sys/stat.h>
 
@@ -22,23 +23,39 @@ typedef mapnik::box2d<double> Box2D;
 static double INT_TO_MERCATOR_METERS = 1/100.0;
 static double HALF_EARTH_CIRCUMFERENCE = 20037508.34;
 
-coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> pPropertyNames)
+template <typename T>
+bool biggerFirst( const T& a, const T& b) { return a.first > b.first;}
+
+BufferedCoordsFeatureSet::BufferedCoordsFeatureSet(/*GEOMETRY_TYPE geoType,*/ Box2D const& box, std::string const& encoding, std::string path, std::set<std::string> pPropertyNames)
     : feature_id_(1),
       tr_(new mapnik::transcoder(encoding)),
-      ctx_(boost::make_shared<mapnik::context_type>()),
-      fData(NULL)/*, geometryType(geoType)*/
+      ctx_(boost::make_shared<mapnik::context_type>())
 {
 
     box_ = Envelope( box.minx() / INT_TO_MERCATOR_METERS, 
                      box.maxx() / INT_TO_MERCATOR_METERS, 
                      box.miny() / INT_TO_MERCATOR_METERS, 
                      box.maxy() / INT_TO_MERCATOR_METERS);
-    buildFileHierarchy(path, files, box, mapnik::box2d<double>(
+    readFiles(path, box, mapnik::box2d<double>(
         -HALF_EARTH_CIRCUMFERENCE, -HALF_EARTH_CIRCUMFERENCE, 
          HALF_EARTH_CIRCUMFERENCE,  HALF_EARTH_CIRCUMFERENCE));
     
-    for (std::string &s: files)
-        cout << "    register file '" << s << "'" << endl;
+    cout << "registered " << (loadedGeometries.size()/1000) << "k geometries for " 
+         << path << endl;
+         
+    isRoad = path.find("road") != string::npos;
+    if (isRoad)
+    {
+        std::sort( loadedGeometries.begin(), loadedGeometries.end(), 
+               biggerFirst<std::pair<int8_t, GenericGeometry*> >);
+        //cout << "SORTING!!!" << endl;
+        
+        /*for ( std::pair<int8_t, GenericGeometry*> p : loadedGeometries)
+        {
+            cout << (int)p.first << ", " << (int)p.second->getZIndex() << endl;
+        }*/
+        
+    }            
 
 //    fData = fopen(path.c_str(), "rb");
     
@@ -53,14 +70,49 @@ coords_featureset::coords_featureset(/*GEOMETRY_TYPE geoType,*/ Box2D const& box
         ctx_->push(s); // register attributes
 }
 
-coords_featureset::~coords_featureset() 
+BufferedCoordsFeatureSet::~BufferedCoordsFeatureSet() 
 { 
     for (char* ch : propertyNamesRaw)
         free(ch);
+        
+    for ( std::pair<int8_t, GenericGeometry*> geom : loadedGeometries)
+        delete geom.second;
 }
 
-void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::string> &files, 
-    const mapnik::box2d<double> &queryBounds, Box2D tileBounds)
+void BufferedCoordsFeatureSet::loadFileContents( const std::string &fileName)
+{
+        FILE* f = fopen(fileName.c_str(), "rb");
+        fseek(f, 0, SEEK_END);
+        uint64_t fileSize = ftell(f);
+        rewind(f);
+        uint8_t* data = new uint8_t[fileSize];
+#ifndef NDEBUG
+        int nRead =
+#endif
+        fread(data, fileSize, 1, f);
+        assert(nRead == 1 && "read error");
+        fclose(f);
+        
+        uint8_t *pos = data;
+        uint8_t *beyond = data + fileSize;
+        
+        while (pos < beyond)
+        {
+            uint32_t numBytes = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
+            GenericGeometry *geom = new GenericGeometry(pos, numBytes, false);
+            loadedGeometries.push_back( std::make_pair( geom->getZIndex(), geom));
+            pos += numBytes;
+        }
+        
+        assert( pos == beyond && "overflow");
+        
+        delete [] data;
+
+}
+
+void BufferedCoordsFeatureSet::readFiles(std::string path, 
+                               const mapnik::box2d<double> &queryBounds, Box2D tileBounds)
 {
     //cout << "tile bounds for " << path << " are " << tileBounds << queryBounds.intersect(tileBounds).valid() << endl;
     //if current tile is outside the query bounds
@@ -74,10 +126,10 @@ void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::st
     if (! S_ISREG(buf.st_mode)) return;
     
     /* If the file is empty, it does not contain relevant data, but it may have child
-     * nodes that do. So do not add it to the list of readable files, but still recurse
+     * nodes that do. So do not parse its contents, but still recurse
      * to its child nodes. */
     if ( buf.st_size > 0)
-        files.push_back(path);
+        loadFileContents(path);
 
     double yMin = tileBounds.miny();
     double yMax = tileBounds.maxy();
@@ -87,111 +139,12 @@ void coords_featureset::buildFileHierarchy(std::string path, std::vector<std::st
     double xMax = tileBounds.maxx();
     double xMid = (xMin + xMax) / 2.0;        
 
-    buildFileHierarchy( path + "0", files, queryBounds, Box2D(xMin, yMid, xMid, yMax));
-    buildFileHierarchy( path + "1", files, queryBounds, Box2D(xMid, yMid, xMax, yMax));
-    buildFileHierarchy( path + "2", files, queryBounds, Box2D(xMin, yMin, xMid, yMid));
-    buildFileHierarchy( path + "3", files, queryBounds, Box2D(xMid, yMin, xMax, yMid));
+    readFiles( path + "0", queryBounds, Box2D(xMin, yMid, xMid, yMax));
+    readFiles( path + "1", queryBounds, Box2D(xMid, yMid, xMax, yMax));
+    readFiles( path + "2", queryBounds, Box2D(xMin, yMin, xMid, yMid));
+    readFiles( path + "3", queryBounds, Box2D(xMid, yMin, xMax, yMid));
 }
 
-bool coords_featureset::wasReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId) const
-{
-
-    switch (entityType)
-    {
-        case OSM_ENTITY_TYPE::NODE: 
-            return nodesReturned.count(entityId);
-        
-        case OSM_ENTITY_TYPE::WAY:  
-            return entityId >= waysReturned.size() ? false : waysReturned[entityId];
-            
-        case OSM_ENTITY_TYPE::RELATION: 
-            return entityId >= relationsReturned.size() ? false : relationsReturned[entityId];
-
-        default: 
-            assert(false && "invalid entity type");
-            return false;
-    }
-    
-
-}
-
-void coords_featureset::markAsReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId)
-{
-    switch (entityType)
-    {
-        case OSM_ENTITY_TYPE::NODE: 
-            nodesReturned.insert(entityId);
-            return;
-        
-        case OSM_ENTITY_TYPE::WAY:  
-            if (entityId >= waysReturned.size())
-            {
-                uint64_t oldSize = waysReturned.size();
-                uint64_t newSize = (entityId + 1) * 11 / 10;
-                waysReturned.resize( newSize);
-                for (uint64_t i = oldSize; i < newSize; i++)
-                    waysReturned[i] = false;        
-            }
-            
-            waysReturned[entityId] = true;
-            return;
-            
-        case OSM_ENTITY_TYPE::RELATION: 
-            if (entityId >= relationsReturned.size())
-            {
-                uint64_t oldSize = relationsReturned.size();
-                uint64_t newSize = (entityId + 1) * 11 / 10;
-                relationsReturned.resize( newSize);
-                for (uint64_t i = oldSize; i < newSize; i++)
-                    relationsReturned[i] = false;        
-            }
-            
-            relationsReturned[entityId] = true;
-            return;
-
-        default: 
-            assert(false && "invalid entity type");
-            return;
-    }
-
-}
-
-bool coords_featureset::getNextGeometry( GenericGeometry &geoOut)
-{
-//    cout << "has " << files.size() << " files." << endl;    
-    while ( files.size() > 0 || fData != NULL)
-    {
-//        cout << "way " << feature_id_ << endl;
-        if (fData == NULL)
-        {
-            cout << "opening next file '" << files.back() << "#" << endl;
-            fData = fopen( files.back().c_str(), "rb");
-            files.pop_back();
-        }
-
-        int ch;
-
-        while ( (ch = fgetc(fData)) != EOF)
-        {
-            ungetc(ch, fData);
-            geoOut.init(fData, true);
-            
-            //cout << "read geometry " << geom.getEntityType() << " " << geom.getEntityId() << endl;
-            //cout << way.id << endl;
-            if ( !wasReturnedBefore( geoOut.getEntityType(), geoOut.getEntityId() ))
-            {
-                markAsReturnedBefore( geoOut.getEntityType(), geoOut.getEntityId());
-                return true;
-            }
-        }
-
-        //already read the whole file -> clean up
-        fclose(fData);
-        fData = NULL;
-    }
-    
-    return false;
-}
 
 static bool parsePointGeometry(const GenericGeometry &geom, mapnik::feature_ptr &feature)
 {
@@ -288,16 +241,21 @@ static bool parsePolygonGeometry(const uint8_t* geoPtr, mapnik::feature_ptr &fea
 }
 
 
-mapnik::feature_ptr coords_featureset::next()
+mapnik::feature_ptr BufferedCoordsFeatureSet::next()
 {
-    while (getNextGeometry(lastReturnedGeometry))
-    {
-        
-        GenericGeometry &geom = lastReturnedGeometry;
 
+    while (loadedGeometries.size())
+    {        
+        GenericGeometry *geom = loadedGeometries.back().second;
+        loadedGeometries.pop_back();
+        /*
+        if (isRoad)
+            cout << (int)geom->getZIndex() << endl;*/
+            
+        
         mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_++));
 
-        for (const pair<const char*, const char*> &kv : geom.getTags())
+        for (const pair<const char*, const char*> &kv : geom->getTags())
         {
             if (propertyNames.count(kv.first))
             {
@@ -306,24 +264,26 @@ mapnik::feature_ptr coords_featureset::next()
             }
         }
         
-        switch (geom.getFeatureType())
+        bool accepted = false;
+        switch (geom->getFeatureType())
         {
             case FEATURE_TYPE::POINT:   
-                if (parsePointGeometry( geom, feature)) 
-                    return feature; 
+                accepted = parsePointGeometry( *geom, feature);
                 break;
             case FEATURE_TYPE::LINE:    
-                if (parseLineGeometry(  geom.getGeometryPtr(), feature, box_)) 
-                    return feature;
+                accepted = parseLineGeometry(  geom->getGeometryPtr(), feature, box_);
                 break;
             case FEATURE_TYPE::POLYGON: 
-                if (parsePolygonGeometry(geom.getGeometryPtr(), feature, box_)) 
-                    return feature;
+                accepted = parsePolygonGeometry(geom->getGeometryPtr(), feature, box_);
                 break;
             default :
                 assert(false && "invalid feature type");
-                return mapnik::feature_ptr(); 
+                break;
         }
+        
+        delete geom;
+        if (accepted)
+            return feature;
     }
     
     return mapnik::feature_ptr();

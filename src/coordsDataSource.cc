@@ -1,6 +1,6 @@
 // file plugin
 #include "coordsDataSource.h"
-#include "coordsFeatureSet.h"
+#include "bufferedCoordsFeatureSet.h"
 
 // boost
 #include <boost/make_shared.hpp>
@@ -161,16 +161,16 @@ mapnik::featureset_ptr coords_datasource::features(mapnik::query const& q) const
          << "x:" << bbox.minx() << " -> " << bbox.maxx() << ", "
          << "y:" << bbox.miny() << " -> " << bbox.maxy() << endl;
          
-    cout << "\tfilter factor: " << q.get_filter_factor() << endl;
+    //cout << "\tfilter factor: " << q.get_filter_factor() << endl;
     
     
-    cout.precision(17);
-    cout << "\tscale denominator: " << q.scale_denominator() << endl;
+    //cout.precision(17);
+    //cout << "\tscale denominator: " << q.scale_denominator() << endl;
     
     
     //double d1 = 
-    cout << "\tresolution type: " << q.resolution().get<0>()
-         << " / " << q.resolution().get<1>() << endl;
+    //cout << "\tresolution type: " << q.resolution().get<0>()
+    //     << " / " << q.resolution().get<1>() << endl;
      
          
     std::set<string> propertyNames;
@@ -182,7 +182,7 @@ mapnik::featureset_ptr coords_datasource::features(mapnik::query const& q) const
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
-        return boost::make_shared<coords_featureset>(q.get_bbox(),desc_.get_encoding(),
+        return boost::make_shared<BufferedCoordsFeatureSet>(q.get_bbox(),desc_.get_encoding(),
             getClosestTileSet(path_, q.scale_denominator()), propertyNames);
     }
 

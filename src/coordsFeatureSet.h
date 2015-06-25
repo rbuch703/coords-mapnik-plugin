@@ -36,9 +36,9 @@ public:
     // mandatory: you must expose a next() method, called when rendering
     mapnik::feature_ptr next();
 
-    bool getNextGeometry( GenericGeometry &geoOut);
 
 private:
+    bool getNextGeometry( GenericGeometry &geoOut);
 
     bool wasReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId) const;
     void markAsReturnedBefore(OSM_ENTITY_TYPE entityType, uint64_t entityId);
